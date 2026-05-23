@@ -74,12 +74,14 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .cell img{width:116px;height:116px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.09);display:block;box-shadow:0 4px 14px rgba(0,0,0,.6);transition:all .2s}
 .cell.sc img{border-color:#FFD700;box-shadow:0 0 0 2px rgba(255,215,0,.45),0 0 22px rgba(255,215,0,.6)}
 .cell.wi img{border-color:#ff6b6b;box-shadow:0 0 0 2px rgba(255,80,80,.4),0 0 22px rgba(255,80,80,.45)}
+.cell.bo img{border-color:#00ff44;box-shadow:0 0 0 3px rgba(0,255,68,.5),0 0 28px rgba(0,255,68,.7),0 0 50px rgba(0,255,68,.25);animation:bostonGlow 1.2s ease-in-out infinite alternate}
+@keyframes bostonGlow{from{box-shadow:0 0 0 3px rgba(0,255,68,.5),0 0 28px rgba(0,255,68,.7)}to{box-shadow:0 0 0 4px rgba(0,255,68,.8),0 0 40px rgba(0,255,68,.9),0 0 70px rgba(0,255,68,.4)}}
 .cell.winning img{border-color:#FFD700;box-shadow:0 0 0 3px rgba(255,215,0,.7),0 0 36px rgba(255,215,0,.85);animation:wincell .4s ease-in-out infinite alternate}
 @keyframes wincell{from{transform:scale(1)}to{transform:scale(1.07)}}
 .lbl{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:8px;color:rgba(255,215,0,.9);background:rgba(0,0,0,.82);padding:2px 6px;border-radius:3px;white-space:nowrap;letter-spacing:1px;z-index:6}
 
 /* BOTTOM CONTROLS */
-.controls-row{display:grid;grid-template-columns:200px 1fr 200px;gap:10px;align-items:stretch}
+.controls-row{display:grid;grid-template-columns:210px auto 210px;gap:10px;align-items:stretch}
 .ctrl-panel{background:rgba(0,0,0,.45);border:1px solid rgba(200,168,76,.22);border-radius:10px;padding:10px 14px;position:relative;overflow:hidden}
 .ctrl-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4),transparent)}
 .ctrl-label{font-family:'Cinzel',serif;font-size:8px;color:#7a6030;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px}
@@ -90,13 +92,13 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .fs-panel{background:rgba(0,0,0,.45);border:1px solid rgba(200,168,76,.22);border-radius:10px;padding:10px 14px;position:relative;overflow:hidden;text-align:center;display:flex;flex-direction:column;justify-content:center}
 .fs-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4),transparent)}
 .fs-panel.active{border-color:rgba(255,200,0,.45);box-shadow:0 0 16px rgba(255,200,0,.1)}
-.fs-idle-label{font-family:'Cinzel',serif;font-size:8px;color:#5a4a20;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:5px}
-.fs-idle-hint{font-family:'Playfair Display',serif;font-size:11px;color:#6a5530;line-height:1.6}
-.fs-idle-hint strong{color:#8a7040;display:block;font-size:12px;margin-bottom:1px}
-.fs-active-label{font-family:'Cinzel',serif;font-size:8px;color:#9a7a3a;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
-.fs-count{font-family:'Playfair Display',serif;font-size:30px;color:#FFD700;font-weight:700;line-height:1;display:block;margin-bottom:2px}
-.fs-mult{font-family:'Cinzel',serif;font-size:11px;color:#c9a84c;letter-spacing:2px}
-.spinbtn{font-family:'Cinzel Decorative',serif;font-size:18px;font-weight:700;background:linear-gradient(135deg,#8B0000 0%,#CC0000 40%,#8B0000 100%);color:#fff8e0;border:none;border-radius:12px;cursor:pointer;letter-spacing:3px;position:relative;overflow:hidden;transition:all .12s;box-shadow:0 4px 0 #4a0000,0 6px 22px rgba(150,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22);text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.fs-idle-label{font-family:'Cinzel',serif;font-size:10px;color:#9a7040;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:7px}
+.fs-idle-hint{font-family:'Playfair Display',serif;font-size:14px;color:#c9a84c;line-height:1.7}
+.fs-idle-hint strong{color:#FFD700;display:block;font-size:15px;margin-bottom:3px;font-family:'Cinzel',serif}
+.fs-active-label{font-family:'Cinzel',serif;font-size:10px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:5px}
+.fs-count{font-family:'Playfair Display',serif;font-size:36px;color:#FFD700;font-weight:700;line-height:1;display:block;margin-bottom:3px}
+.fs-mult{font-family:'Cinzel',serif;font-size:13px;color:#FFD700;letter-spacing:2px}
+.spinbtn{font-family:'Cinzel Decorative',serif;font-size:16px;font-weight:700;background:linear-gradient(135deg,#8B0000 0%,#CC0000 40%,#8B0000 100%);color:#fff8e0;border:none;border-radius:12px;cursor:pointer;letter-spacing:2px;position:relative;overflow:hidden;transition:all .12s;box-shadow:0 4px 0 #4a0000,0 6px 22px rgba(150,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22);text-shadow:0 1px 4px rgba(0,0,0,.5);padding:0 24px;white-space:nowrap}
 .spinbtn::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:shimmer 2.5s infinite}
 @keyframes shimmer{to{left:200%}}
 .spinbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 0 #4a0000,0 10px 30px rgba(200,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22)}
@@ -112,8 +114,8 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .pr:hover{border-color:rgba(200,168,76,.3);background:rgba(20,15,5,.5)}
 .pr.scatter-row{border-color:rgba(255,215,0,.18)}
 .pr.wild-row{border-color:rgba(255,80,80,.15)}
-.pr.boston-row{border-color:rgba(255,150,0,.25)}
-.pr.boston-row img{border-color:rgba(255,150,0,.6);box-shadow:0 0 12px rgba(255,150,0,.3)}
+.pr.boston-row{border-color:rgba(0,255,68,.3)}
+.pr.boston-row img{border-color:#00ff44;box-shadow:0 0 14px rgba(0,255,68,.5)}
 .pr img{width:64px;height:64px;border-radius:10px;object-fit:cover;border:2px solid rgba(200,168,76,.3);box-shadow:0 3px 10px rgba(0,0,0,.6)}
 .pr.scatter-row img{border-color:rgba(255,215,0,.6);box-shadow:0 0 12px rgba(255,215,0,.3)}
 .pr.wild-row img{border-color:rgba(255,80,80,.5);box-shadow:0 0 12px rgba(255,80,80,.25)}
@@ -297,8 +299,11 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
     <button class="spinbtn" id="spinBtn">SPIN</button>
     <div class="fs-panel" id="fsPanel">
       <div id="fsIdle">
-        <span class="fs-idle-label">Bonus Round</span>
-        <div class="fs-idle-hint"><strong>Land 3+ Mollys</strong>to unlock Free Spins<br>with a multiplier</div>
+        <span class="fs-idle-label">🐾 Bonus Round</span>
+        <div class="fs-idle-hint">
+          <strong>Land 3 Mollys</strong>
+          Locks in &amp; triggers<br>Free Spins bonus!
+        </div>
       </div>
       <div id="fsActive" style="display:none">
         <span class="fs-active-label">Free Spins Remaining</span>
@@ -1075,7 +1080,7 @@ var CH=128;
 
 function makeCell(si){
   var s=SYM[si];
-  var d=document.createElement('div'); d.className='cell'+(s.sc?' sc':'')+(s.wi?' wi':'');
+  var d=document.createElement('div'); d.className='cell'+(s.sc?' sc':'')+(s.wi?' wi':'')+(s.bo?' bo':'');
   var img=document.createElement('img'); img.src=IMGS[s.img]; img.alt=s.lbl;
   var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.lbl;
   d.appendChild(img); d.appendChild(lbl); return d;
@@ -1155,20 +1160,20 @@ function doSpin(){
   function launchReel(reelIdx){
     var baseDur, startDelay;
 
-    // Base duration — fast and snappy
-    var baseTimes=[320,350,380,410,440];
+    // Base duration — fast and punchy, ~2s total for all 5
+    var baseTimes=[160,175,190,205,220];
     baseDur=baseTimes[reelIdx];
 
     // Adjust speed based on Molly drama state
     if(mollysSoFar>=2){
       // 2 Mollys — overdrive, reels fly
-      baseDur=Math.max(200,baseDur-120);
+      baseDur=Math.max(110,baseDur-60);
     } else if(mollysSoFar===1){
       // 1 Molly — speeding up
-      baseDur=Math.max(240,baseDur-80);
+      baseDur=Math.max(130,baseDur-40);
     } else if(reelIdx>=3 && mollysSoFar===0){
       // Reels 4-5, no Molly — slight slowdown for drama
-      baseDur=baseDur+60;
+      baseDur=baseDur+30;
     }
 
     spinReel(reelIdx, res[reelIdx], baseDur, function(){
@@ -1184,8 +1189,8 @@ function doSpin(){
         onDone(res,free);
       } else {
         // Stagger between reels — shorter gap when excited
-        var gap = mollysSoFar>0 ? 60 : 120;
-        if(mollysSoFar>=2) gap=30;
+        var gap = mollysSoFar>0 ? 30 : 50;
+        if(mollysSoFar>=2) gap=15;
         setTimeout(function(){ launchReel(reelsDone); }, gap);
       }
     });
