@@ -120,7 +120,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .boston-pop{
   position:absolute;
   left:50%;
-  top:40%;
+  top:50%;
   transform:translateX(-50%) translateY(-50%) scale(0);
   z-index:20;
   pointer-events:none;
@@ -823,18 +823,26 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
 }
 
 // ── Molly reel pop announcement ──────────────────────────────────────────
-function showBostonPop(reelIdx, mult){
-  var reelEl = document.getElementById('r'+reelIdx);
-  if(!reelEl) return;
+function showBostonPop(reelIdx, mult, rowIdx){
+  var t = document.getElementById('t'+reelIdx);
+  if(!t) return;
 
-  var existing = reelEl.querySelector('.boston-pop');
-  if(existing) reelEl.removeChild(existing);
+  // Find the exact cell Boston is on
+  var PAD2=16;
+  var row = (rowIdx !== undefined) ? rowIdx : 0;
+  var cells = t.querySelectorAll('.cell');
+  var targetCell = cells[PAD2 + row];
+  if(!targetCell) return;
+
+  // Remove any existing pop on this cell
+  var existing = targetCell.querySelector('.boston-pop');
+  if(existing) targetCell.removeChild(existing);
 
   var pop = document.createElement('div');
   pop.className = 'boston-pop';
 
   var dog = document.createElement('span');
-  dog.style.cssText = 'font-size:28px;display:block;margin-bottom:4px';
+  dog.style.cssText = 'font-size:22px;display:block;margin-bottom:2px';
   dog.textContent = '🐕';
 
   var badge = document.createElement('span');
@@ -848,7 +856,7 @@ function showBostonPop(reelIdx, mult){
   pop.appendChild(dog);
   pop.appendChild(badge);
   pop.appendChild(label);
-  reelEl.appendChild(pop);
+  targetCell.appendChild(pop);
 
   pop.style.animation = 'bostonPopIn 0.45s cubic-bezier(0.175,0.885,0.32,1.6) forwards';
 
@@ -1409,16 +1417,15 @@ function spinReel(idx,finals,dur,cb){
       })(pi);
     }
     // Boston on this reel? Roll and show multiplier immediately
-    var bostonOnReel=false;
+    var bostonRow=-1;
     for(var fi=0;fi<finals.length;fi++){
-      if(finals[fi]===2){ bostonOnReel=true; break; }
+      if(finals[fi]===2){ bostonRow=fi; break; }
     }
-    if(bostonOnReel){
+    if(bostonRow>=0){
       var bMults=[2,3,5];
       var rolledMult=bMults[Math.floor(Math.random()*bMults.length)];
-      // Store so win eval uses same value
       window._pendingBostonMult=rolledMult;
-      showBostonPop(idx, rolledMult);
+      showBostonPop(idx, rolledMult, bostonRow);
       // Green reel glow
       var bReelEl=document.getElementById('r'+idx);
       if(bReelEl){
