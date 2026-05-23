@@ -334,7 +334,10 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
         <button class="ctrl-bbtn" id="cb10">$10</button>
       </div>
     </div>
-    <button class="spinbtn" id="spinBtn">SPIN</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1">
+      <button class="spinbtn" id="spinBtn" style="width:100%">SPIN</button>
+      <span style="font-family:'Cinzel',serif;font-size:9px;color:#5a4a20;letter-spacing:2px;text-transform:uppercase">press spacebar</span>
+    </div>
     <div class="fs-panel" id="fsPanel">
       <div id="fsIdle">
         <span class="fs-idle-label">🐾 Bonus Round</span>
@@ -1279,7 +1282,8 @@ function onDone(res,wasFree){
         var linePay=SYM[s].mult[cnt]*bet*(wasFree?freeMult:1);
         winAmt+=linePay;
         for(var ci=0;ci<cols.length;ci++) winningCells.push({reel:cols[ci],row:row});
-        winLines.push({sym:SYM[s].lbl, cnt:cnt, row:rowNames[row], pay:linePay});
+        var basePay=SYM[s].mult[cnt]*bet;
+        winLines.push({sym:SYM[s].lbl, cnt:cnt, row:rowNames[row], pay:linePay, base:basePay, mult:(wasFree?freeMult:1)});
       }
     }
   }
@@ -1308,8 +1312,10 @@ function onDone(res,wasFree){
   if(bostonFound && winAmt>0){
     var mults=[2,3,5];
     bostonMult=mults[Math.floor(Math.random()*mults.length)];
+    var preBoston=winAmt;
     winAmt=winAmt*bostonMult;
-    winLines.push({sym:'BOSTON ×'+bostonMult,cnt:bostonMult,row:'ANYWHERE',pay:winAmt});
+    // Show the extra amount Boston added (not the full total)
+    winLines.push({sym:'BOSTON ×'+bostonMult,cnt:bostonMult,row:'ANYWHERE',pay:winAmt-preBoston});
     // Show multiplier badge on every Boston cell
     for(var bi=0;bi<bostonCells.length;bi++){
       var bc=bostonCells[bi];
@@ -1376,8 +1382,14 @@ function showWinBreakdown(lines, total){
     var rowText=l.row||'';
     // Boston has multiplier info in sym
     var isMult=(rowText==='ANYWHERE');
+    var chainStr='';
+    if(!isMult && l.base && l.mult && l.mult>1){
+      chainStr='<span class="wb-row-label">$'+l.base.toFixed(2)+' &times;'+l.mult+' free</span>';
+    } else if(rowText && !isMult){
+      chainStr='<span class="wb-row-label">'+rowText+'</span>';
+    }
     div.innerHTML='<span class="wb-sym">'+symText+(l.cnt&&!isMult?' &times;'+l.cnt:'')+'</span>'
-      +(rowText&&!isMult?'<span class="wb-row-label">'+rowText+'</span>':'')
+      +chainStr
       +'<span class="wb-pay">+$'+l.pay.toFixed(2)+'</span>';
     container.appendChild(div);
   });
