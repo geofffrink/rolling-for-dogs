@@ -68,7 +68,22 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .reels-wrap{background:linear-gradient(180deg,rgba(0,0,0,.83),rgba(5,0,10,.93));border-radius:14px;padding:10px 8px 8px;margin-bottom:12px;border:1px solid rgba(200,168,76,.16);box-shadow:inset 0 0 50px rgba(0,0,0,.85),0 0 0 1px rgba(100,60,10,.35);position:relative}
 .payline-bar{position:absolute;left:8px;right:8px;top:25%;height:256px;border:1px solid rgba(255,215,0,.2);border-radius:8px;pointer-events:none;z-index:10}
 .reels{display:flex;gap:4px}
-.reel{flex:1;height:512px;overflow:hidden;border-radius:10px;background:#000;position:relative;border:1px solid rgba(255,255,255,.04);box-shadow:inset 0 0 25px rgba(0,0,0,.95)}
+.reel{flex:1;height:512px;overflow:hidden;border-radius:10px;background:#000;position:relative;border:1px solid rgba(255,255,255,.04);box-shadow:inset 0 0 25px rgba(0,0,0,.95);transition:border-color 0.2s,box-shadow 0.2s}
+.reel.spinning-blur .track{filter:blur(3px) brightness(0.7);transition:none}
+.reel.landing{animation:reelBounce 0.38s cubic-bezier(0.22,1.2,0.4,1) forwards}
+@keyframes reelBounce{0%{transform:translateY(0)}30%{transform:translateY(-6px)}60%{transform:translateY(3px)}80%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+.reel.spin-active{border-color:rgba(200,168,76,0.25)}
+/* Motion streak overlay while spinning */
+.reel .spin-streak{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0;transition:opacity 0.1s;background:repeating-linear-gradient(180deg,transparent 0px,transparent 18px,rgba(255,255,255,0.04) 18px,rgba(255,255,255,0.04) 19px)}
+.reel.spinning-blur .spin-streak{opacity:1}
+/* Glow pop on cell land */
+.cell.pop img{animation:cellPop 0.35s cubic-bezier(0.22,1.4,0.4,1) forwards}
+@keyframes cellPop{0%{transform:scale(0.88)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+/* Screen shake */
+@keyframes machineShake{0%{transform:translate(0,0)}10%{transform:translate(-3px,2px)}20%{transform:translate(3px,-2px)}30%{transform:translate(-2px,3px)}40%{transform:translate(2px,-1px)}50%{transform:translate(-1px,2px)}60%{transform:translate(3px,-3px)}70%{transform:translate(-2px,1px)}80%{transform:translate(1px,-2px)}90%{transform:translate(-1px,1px)}100%{transform:translate(0,0)}}
+@keyframes machineShakeBig{0%{transform:translate(0,0)}8%{transform:translate(-5px,4px)}16%{transform:translate(5px,-4px)}24%{transform:translate(-4px,5px)}32%{transform:translate(4px,-3px)}40%{transform:translate(-3px,4px)}48%{transform:translate(5px,-5px)}56%{transform:translate(-4px,2px)}64%{transform:translate(3px,-4px)}72%{transform:translate(-2px,3px)}80%{transform:translate(2px,-2px)}90%{transform:translate(-1px,1px)}100%{transform:translate(0,0)}}
+.machine.shake{animation:machineShake 0.35s ease-out}
+.machine.shake-big{animation:machineShakeBig 0.55s ease-out}
 .track{display:flex;flex-direction:column}
 .cell{height:128px;min-height:128px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;padding:4px}
 .cell img{width:116px;height:116px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.09);display:block;box-shadow:0 4px 14px rgba(0,0,0,.6);transition:all .2s}
@@ -279,11 +294,11 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
   <div class="reels-wrap">
     <div class="payline-bar"></div>
     <div class="reels">
-      <div class="reel"><div class="track" id="t0"></div></div>
-      <div class="reel"><div class="track" id="t1"></div></div>
-      <div class="reel"><div class="track" id="t2"></div></div>
-      <div class="reel"><div class="track" id="t3"></div></div>
-      <div class="reel"><div class="track" id="t4"></div></div>
+      <div class="reel" id="r0"><div class="spin-streak"></div><div class="track" id="t0"></div></div>
+      <div class="reel" id="r1"><div class="spin-streak"></div><div class="track" id="t1"></div></div>
+      <div class="reel" id="r2"><div class="spin-streak"></div><div class="track" id="t2"></div></div>
+      <div class="reel" id="r3"><div class="spin-streak"></div><div class="track" id="t3"></div></div>
+      <div class="reel" id="r4"><div class="spin-streak"></div><div class="track" id="t4"></div></div>
     </div>
   </div>
 
@@ -376,29 +391,13 @@ function mkNoise(t,dur,vol,filterFreq){
   src.start(t); src.stop(t+dur+0.05);
 }
 
-// ── EDM CLUB DROP ──────────────────────────────────────────────────────────
-// 128 BPM — four-on-the-floor kick, pumping bass, euphoric synth lead
-// Daft Punk energy meets casino floor
-var BPM=128, BEAT=60/BPM, BAR=BEAT*4;
+// ── SMOOTH CHILL — 90 BPM, 16-bar evolving phrase ──────────────────────────
+// Warm pads, Rhodes-style keys, soft brushed kit, walking bass, melodic hooks
+var BPM=90, BEAT=60/BPM, BAR=BEAT*4;
 
-// 8-bar loop: 4 bars build → 4 bars full drop
-// Key: F minor — dark and energetic
-// Chord progression: Fm / Db / Ab / Eb (repeat)
-var DROP_BASS = [174.6, 138.6, 207.7, 155.6]; // F2, Db2, Ab2, Eb2
-var LEAD_NOTES = [
-  // Bar 1-2: melodic hook (8th notes)
-  [349.2,415.3,523.3,466.2,415.3,349.2,311.1,349.2],
-  [277.2,311.1,349.2,415.3,349.2,311.1,277.2,233.1],
-  [415.3,466.2,523.3,622.3,523.3,466.2,415.3,349.2],
-  [311.1,349.2,415.3,466.2,415.3,349.2,311.1,277.2],
-];
-// Supersaw chord stab frequencies
-var STAB_CHORDS = [
-  [349.2,415.3,523.3,622.3],  // Fm
-  [277.2,349.2,415.3,523.3],  // Db
-  [207.7,261.6,311.1,392.0],  // Ab
-  [155.6,196.0,233.1,311.1],  // Eb
-];
+// Fmaj7 / Am7 / Dm7 / G7
+var CHILL_CHORDS=[[174.6,220,261.6,329.6],[220,261.6,329.6,440],[146.8,174.6,220,293.7],[196,246.9,293.7,392]];
+var CHILL_BASS=[87.3,110,73.4,98];
 
 function startMusic(){
   if(!audioCtx||musicPlaying) return;
@@ -408,184 +407,153 @@ function startMusic(){
 
 function scheduleMusic(startAt){
   if(!musicPlaying) return;
-  var loopLen=BAR*4;
+  var BARS=16, loopLen=BAR*BARS;
 
-  for(var ci=0;ci<4;ci++){
-    var t=startAt+ci*BAR;
-    var bassRoot=DROP_BASS[ci];
-    var leadSeq=LEAD_NOTES[ci];
-    var stabChord=STAB_CHORDS[ci];
+  for(var bar=0;bar<BARS;bar++){
+    var t=startAt+bar*BAR;
+    var ci=bar%4;
+    var phase=Math.floor(bar/4); // 0-3, builds gently
 
-    // ── Four-on-the-floor kick — punchy and hard ──
-    for(var kb=0;kb<4;kb++){
-      (function(b){
-        var tk=t+b*BEAT;
-        // Sub thump
-        var ko=audioCtx.createOscillator(),kg=audioCtx.createGain();
-        ko.type='sine';
-        ko.frequency.setValueAtTime(180,tk);
-        ko.frequency.exponentialRampToValueAtTime(38,tk+0.08);
-        kg.gain.setValueAtTime(0,tk); kg.gain.linearRampToValueAtTime(1.0,tk+0.004);
-        kg.gain.exponentialRampToValueAtTime(0.0001,tk+0.20);
-        ko.connect(kg); kg.connect(musicGain); ko.start(tk); ko.stop(tk+0.22);
-        musicNodes.push(ko);
-        // Kick click
-        var ksz=Math.floor(audioCtx.sampleRate*0.022);
-        var kbuf=audioCtx.createBuffer(1,ksz,audioCtx.sampleRate);
-        var kd=kbuf.getChannelData(0);
-        for(var k=0;k<ksz;k++) kd[k]=(Math.random()*2-1)*(1-k/ksz);
-        var ksrc=audioCtx.createBufferSource(); ksrc.buffer=kbuf;
-        var kf=audioCtx.createBiquadFilter(); kf.type='lowpass'; kf.frequency.value=3500;
-        var kgain=audioCtx.createGain(); kgain.gain.value=0.45;
-        ksrc.connect(kf); kf.connect(kgain); kgain.connect(musicGain);
-        ksrc.start(tk); ksrc.stop(tk+0.025);
-        musicNodes.push(ksrc);
-      })(kb);
-    }
+    // ── Soft kick on beat 1 only ──
+    (function(tk){
+      var ko=audioCtx.createOscillator(),kg=audioCtx.createGain();
+      ko.type='sine';
+      ko.frequency.setValueAtTime(140,tk); ko.frequency.exponentialRampToValueAtTime(36,tk+0.09);
+      kg.gain.setValueAtTime(0,tk); kg.gain.linearRampToValueAtTime(0.55,tk+0.005);
+      kg.gain.exponentialRampToValueAtTime(0.0001,tk+0.22);
+      ko.connect(kg); kg.connect(musicGain); ko.start(tk); ko.stop(tk+0.24);
+      musicNodes.push(ko);
+    })(t);
 
-    // ── Clap on beats 2 and 4 ──
-    [1,3].forEach(function(b){
-      var tc=t+b*BEAT;
-      // Two-layer clap for thickness
-      [0, 0.008].forEach(function(offset){
-        var csz=Math.floor(audioCtx.sampleRate*0.07);
-        var cbuf=audioCtx.createBuffer(1,csz,audioCtx.sampleRate);
-        var cd=cbuf.getChannelData(0);
-        for(var k=0;k<csz;k++) cd[k]=(Math.random()*2-1)*(1-k/csz);
-        var csrc=audioCtx.createBufferSource(); csrc.buffer=cbuf;
-        var cf=audioCtx.createBiquadFilter(); cf.type='bandpass';
-        cf.frequency.value=1200; cf.Q.value=0.9;
-        var cg=audioCtx.createGain(); cg.gain.value=0.55;
-        csrc.connect(cf); cf.connect(cg); cg.connect(musicGain);
-        csrc.start(tc+offset); csrc.stop(tc+offset+0.08);
-        musicNodes.push(csrc);
-      });
+    // ── Brushed snare feel on 2 and 4 ──
+    [BEAT,3*BEAT].forEach(function(b){
+      var sz=Math.floor(audioCtx.sampleRate*0.14);
+      var buf=audioCtx.createBuffer(1,sz,audioCtx.sampleRate);
+      var d=buf.getChannelData(0);
+      for(var k=0;k<sz;k++) d[k]=(Math.random()*2-1)*(1-k/sz)*0.7;
+      var src=audioCtx.createBufferSource(); src.buffer=buf;
+      var f=audioCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2800; f.Q.value=1.2;
+      var g=audioCtx.createGain(); g.gain.value=0.22;
+      src.connect(f); f.connect(g); g.connect(musicGain);
+      src.start(t+b); src.stop(t+b+0.15);
+      musicNodes.push(src);
     });
 
-    // ── Open hi-hat every 8th, closed on 16ths ──
-    for(var hb=0;hb<16;hb++){
-      (function(b){
-        var th=t+b*(BEAT/4);
-        var isOpen=(b%2!==0); // open on off-16ths
-        var vol=isOpen?0.13:b%4===0?0.18:0.09;
-        var dur=isOpen?0.055:0.022;
-        var hsz=Math.floor(audioCtx.sampleRate*dur);
-        var hbuf=audioCtx.createBuffer(1,hsz,audioCtx.sampleRate);
-        var hd=hbuf.getChannelData(0);
-        for(var k=0;k<hsz;k++) hd[k]=(Math.random()*2-1)*(1-k/hsz);
-        var hsrc=audioCtx.createBufferSource(); hsrc.buffer=hbuf;
-        var hpf=audioCtx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=isOpen?7000:9000;
-        var hg=audioCtx.createGain(); hg.gain.value=vol;
-        hsrc.connect(hpf); hpf.connect(hg); hg.connect(musicGain);
-        hsrc.start(th); hsrc.stop(th+dur+0.005);
-        musicNodes.push(hsrc);
-      })(hb);
+    // ── Ghost hi-hats — soft 8th notes ──
+    for(var h=0;h<8;h++){
+      var thh=t+h*(BEAT/2);
+      var vol=(h%4===0)?0.09:(h%2===0)?0.06:0.04;
+      var open=(h%4===2);
+      var hsz=Math.floor(audioCtx.sampleRate*(open?0.07:0.022));
+      var hbuf=audioCtx.createBuffer(1,hsz,audioCtx.sampleRate);
+      var hd=hbuf.getChannelData(0);
+      for(var k=0;k<hsz;k++) hd[k]=(Math.random()*2-1)*(1-k/hsz);
+      var hsrc=audioCtx.createBufferSource(); hsrc.buffer=hbuf;
+      var hf=audioCtx.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=open?7000:9500;
+      var hg=audioCtx.createGain(); hg.gain.value=vol;
+      hsrc.connect(hf); hf.connect(hg); hg.connect(musicGain);
+      hsrc.start(thh); hsrc.stop(thh+(open?0.08:0.025));
+      musicNodes.push(hsrc);
     }
 
-    // ── Pumping sidechain bass — EDM signature ──
-    // Bass ducks on each kick then swells back up
-    for(var bb=0;bb<4;bb++){
-      (function(b){
-        var tb=t+b*BEAT;
-        // Main bass note
-        var bao=audioCtx.createOscillator(), bag=audioCtx.createGain();
-        bao.type='sawtooth'; bao.frequency.value=bassRoot;
-        var blp=audioCtx.createBiquadFilter(); blp.type='lowpass';
-        blp.frequency.setValueAtTime(200,tb);      // ducked on kick
-        blp.frequency.linearRampToValueAtTime(1800,tb+BEAT*0.15); // swell open
-        blp.frequency.setValueAtTime(1800,tb+BEAT*0.85);
-        blp.frequency.linearRampToValueAtTime(200,tb+BEAT*0.98); // close before next kick
-        blp.Q.value=2;
-        // Gain sidechain simulation
-        bag.gain.setValueAtTime(0,tb); bag.gain.linearRampToValueAtTime(0.0001,tb+0.01);
-        bag.gain.linearRampToValueAtTime(0.75,tb+BEAT*0.12);
-        bag.gain.setValueAtTime(0.75,tb+BEAT*0.88);
-        bag.gain.linearRampToValueAtTime(0,tb+BEAT);
-        bao.connect(blp); blp.connect(bag); bag.connect(musicGain);
-        bao.start(tb); bao.stop(tb+BEAT+0.02);
-        musicNodes.push(bao);
-        // Sub octave sine
-        var sub=audioCtx.createOscillator(), subg=audioCtx.createGain();
-        sub.type='sine'; sub.frequency.value=bassRoot*0.5;
-        subg.gain.setValueAtTime(0,tb+0.01); subg.gain.linearRampToValueAtTime(0.5,tb+BEAT*0.12);
-        subg.gain.setValueAtTime(0.5,tb+BEAT*0.88); subg.gain.linearRampToValueAtTime(0,tb+BEAT);
-        sub.connect(subg); subg.connect(musicGain); sub.start(tb); sub.stop(tb+BEAT+0.02);
-        musicNodes.push(sub);
-      })(bb);
-    }
-
-    // ── Supersaw lead synth — the euphoric hook ──
-    leadSeq.forEach(function(freq,step){
-      var tl=t+step*(BEAT/2);
-      // 3 detuned saws = supersaw
-      [-4,0,4].forEach(function(detuneCents){
-        var detune=Math.pow(2,detuneCents/1200);
-        var lo=audioCtx.createOscillator(), lg=audioCtx.createGain();
-        lo.type='sawtooth'; lo.frequency.value=freq*detune;
-        var llp=audioCtx.createBiquadFilter(); llp.type='lowpass';
-        llp.frequency.setValueAtTime(4000,tl);
-        llp.frequency.exponentialRampToValueAtTime(1600,tl+BEAT*0.3);
-        llp.Q.value=3;
-        lg.gain.setValueAtTime(0,tl); lg.gain.linearRampToValueAtTime(0.12,tl+0.01);
-        lg.gain.setValueAtTime(0.12,tl+BEAT*0.35); lg.gain.exponentialRampToValueAtTime(0.0001,tl+BEAT*0.48);
-        lo.connect(llp); llp.connect(lg); lg.connect(musicGain);
-        lo.start(tl); lo.stop(tl+BEAT*0.5);
-        musicNodes.push(lo);
-      });
+    // ── Long pad hold — swells in each phase ──
+    var pVol=0.055+phase*0.012;
+    CHILL_CHORDS[ci].forEach(function(f){
+      var po=audioCtx.createOscillator(),pg=audioCtx.createGain();
+      po.type='sine'; po.frequency.value=f;
+      pg.gain.setValueAtTime(0,t); pg.gain.linearRampToValueAtTime(pVol,t+0.5);
+      pg.gain.setValueAtTime(pVol,t+BAR-0.5); pg.gain.linearRampToValueAtTime(0,t+BAR);
+      po.connect(pg); pg.connect(musicGain); po.start(t); po.stop(t+BAR+0.1);
+      musicNodes.push(po);
+      // Detuned shimmer
+      var po2=audioCtx.createOscillator(),pg2=audioCtx.createGain();
+      po2.type='sine'; po2.frequency.value=f*1.003;
+      pg2.gain.setValueAtTime(0,t); pg2.gain.linearRampToValueAtTime(pVol*0.5,t+0.7);
+      pg2.gain.setValueAtTime(pVol*0.5,t+BAR-0.5); pg2.gain.linearRampToValueAtTime(0,t+BAR);
+      po2.connect(pg2); pg2.connect(musicGain); po2.start(t); po2.stop(t+BAR+0.1);
+      musicNodes.push(po2);
     });
 
-    // ── Chord stabs on off-beats — the energy punches ──
-    [0.5,1.5,2.5,3.5].forEach(function(b){
-      var ts=t+b*BEAT;
-      stabChord.forEach(function(f){
-        [-2,0,2].forEach(function(dc){
-          var detune=Math.pow(2,dc/1200);
-          var so=audioCtx.createOscillator(), sg=audioCtx.createGain();
-          so.type='sawtooth'; so.frequency.value=f*detune;
-          var slp=audioCtx.createBiquadFilter(); slp.type='lowpass';
-          slp.frequency.setValueAtTime(3000,ts); slp.frequency.exponentialRampToValueAtTime(900,ts+0.12);
-          slp.Q.value=4;
-          sg.gain.setValueAtTime(0,ts); sg.gain.linearRampToValueAtTime(0.07,ts+0.008);
-          sg.gain.exponentialRampToValueAtTime(0.0001,ts+0.16);
-          so.connect(slp); slp.connect(sg); sg.connect(musicGain);
-          so.start(ts); so.stop(ts+0.18);
-          musicNodes.push(so);
-        });
-      });
+    // ── Rhodes-style bell keys on off-beats ──
+    var keyNotes=CHILL_CHORDS[ci];
+    [0.5,1.5,2.5,3.5].forEach(function(b,i){
+      var kf=keyNotes[i%keyNotes.length]*2;
+      var ko=audioCtx.createOscillator(),kg=audioCtx.createGain();
+      ko.type='sine'; ko.frequency.value=kf;
+      kg.gain.setValueAtTime(0,t+b*BEAT); kg.gain.linearRampToValueAtTime(0.12,t+b*BEAT+0.015);
+      kg.gain.exponentialRampToValueAtTime(0.0001,t+b*BEAT+0.45);
+      ko.connect(kg); kg.connect(musicGain); ko.start(t+b*BEAT); ko.stop(t+b*BEAT+0.5);
+      musicNodes.push(ko);
+      // Octave shimmer
+      var ko2=audioCtx.createOscillator(),kg2=audioCtx.createGain();
+      ko2.type='sine'; ko2.frequency.value=kf*2;
+      kg2.gain.setValueAtTime(0,t+b*BEAT); kg2.gain.linearRampToValueAtTime(0.04,t+b*BEAT+0.01);
+      kg2.gain.exponentialRampToValueAtTime(0.0001,t+b*BEAT+0.22);
+      ko2.connect(kg2); kg2.connect(musicGain); ko2.start(t+b*BEAT); ko2.stop(t+b*BEAT+0.25);
+      musicNodes.push(ko2);
     });
 
-    // ── Riser/sweeper texture — builds tension across bar ──
-    if(ci===3){
-      var riser=audioCtx.createOscillator(), rg=audioCtx.createGain();
-      riser.type='sawtooth';
-      riser.frequency.setValueAtTime(200,t); riser.frequency.exponentialRampToValueAtTime(1600,t+BAR);
-      var rlp=audioCtx.createBiquadFilter(); rlp.type='lowpass';
-      rlp.frequency.setValueAtTime(400,t); rlp.frequency.linearRampToValueAtTime(3000,t+BAR);
-      rlp.Q.value=2;
-      rg.gain.setValueAtTime(0,t); rg.gain.linearRampToValueAtTime(0.08,t+BAR*0.5);
-      rg.gain.linearRampToValueAtTime(0.18,t+BAR-0.1); rg.gain.linearRampToValueAtTime(0,t+BAR);
-      riser.connect(rlp); rlp.connect(rg); rg.connect(musicGain);
-      riser.start(t); riser.stop(t+BAR+0.05);
-      musicNodes.push(riser);
+    // ── Smooth walking bass ──
+    var bRoot=CHILL_BASS[ci];
+    var bassSteps=[1,1.125,1,1.333,1,1.25,1,1.5];
+    for(var bs=0;bs<4;bs++){
+      var tb=t+bs*BEAT;
+      var bf=bRoot*bassSteps[bs*2+(bar%2)];
+      var bo=audioCtx.createOscillator(),bg=audioCtx.createGain();
+      bo.type='sine'; bo.frequency.value=bf;
+      bg.gain.setValueAtTime(0,tb); bg.gain.linearRampToValueAtTime(0.42,tb+0.02);
+      bg.gain.setValueAtTime(0.42,tb+BEAT*0.75); bg.gain.exponentialRampToValueAtTime(0.0001,tb+BEAT*0.92);
+      bo.connect(bg); bg.connect(musicGain); bo.start(tb); bo.stop(tb+BEAT);
+      musicNodes.push(bo);
     }
 
-    // ── Arpeggio sparkle on top — glittery 16th notes ──
-    var arp=[bassRoot*4, bassRoot*5, bassRoot*6, bassRoot*8,
-             bassRoot*6, bassRoot*5, bassRoot*4, bassRoot*3];
-    for(var ai=0;ai<8;ai++){
-      (function(i){
-        var ta=t+i*(BEAT/2)+BEAT*0.25; // offset to fill gaps in lead
-        var ao=audioCtx.createOscillator(), ag=audioCtx.createGain();
-        ao.type='sine'; ao.frequency.value=arp[i];
-        ag.gain.setValueAtTime(0,ta); ag.gain.linearRampToValueAtTime(0.06,ta+0.008);
-        ag.gain.exponentialRampToValueAtTime(0.0001,ta+BEAT*0.22);
-        ao.connect(ag); ag.connect(musicGain); ao.start(ta); ao.stop(ta+BEAT*0.24);
-        musicNodes.push(ao);
-      })(ai);
+    // ── Melodic hook — 4 different phrases cycling across 16 bars ──
+    var melodies=[
+      [329.6,392,440,392,349.2,392,329.6,293.7],
+      [261.6,293.7,329.6,349.2,329.6,293.7,261.6,246.9],
+      [392,440,493.9,523.3,493.9,440,392,349.2],
+      [349.2,392,440,415.3,392,349.2,329.6,293.7]
+    ];
+    var mel=melodies[bar%4];
+    mel.forEach(function(mf,i){
+      var tm=t+i*(BEAT/2);
+      var mo=audioCtx.createOscillator(),mg2=audioCtx.createGain();
+      mo.type='sine'; mo.frequency.value=mf;
+      // Volume builds across phases
+      var mVol=0.08+(phase*0.018);
+      mg2.gain.setValueAtTime(0,tm); mg2.gain.linearRampToValueAtTime(mVol,tm+0.018);
+      mg2.gain.setValueAtTime(mVol,tm+BEAT*0.38); mg2.gain.exponentialRampToValueAtTime(0.0001,tm+BEAT*0.48);
+      mo.connect(mg2); mg2.connect(musicGain); mo.start(tm); mo.stop(tm+BEAT*0.5);
+      musicNodes.push(mo);
+    });
+
+    // ── Counter melody on even bars of phase 2+ ──
+    if(phase>=2 && bar%2===1){
+      var counter=[261.6,246.9,220,246.9,261.6,293.7,261.6,220];
+      counter.forEach(function(cf,i){
+        var tc=t+i*(BEAT/2)+BEAT*0.25;
+        var co=audioCtx.createOscillator(),cg=audioCtx.createGain();
+        co.type='sine'; co.frequency.value=cf;
+        cg.gain.setValueAtTime(0,tc); cg.gain.linearRampToValueAtTime(0.06,tc+0.02);
+        cg.gain.exponentialRampToValueAtTime(0.0001,tc+BEAT*0.4);
+        co.connect(cg); cg.connect(musicGain); co.start(tc); co.stop(tc+BEAT*0.42);
+        musicNodes.push(co);
+      });
+    }
+
+    // ── Soft swell on bar transitions ──
+    if(bar%4===3){
+      var sw=audioCtx.createOscillator(),swg=audioCtx.createGain();
+      sw.type='sine'; sw.frequency.value=CHILL_BASS[ci]*8;
+      swg.gain.setValueAtTime(0,t+BAR-0.6);
+      swg.gain.linearRampToValueAtTime(0.04,t+BAR-0.1);
+      swg.gain.linearRampToValueAtTime(0,t+BAR+0.1);
+      sw.connect(swg); swg.connect(musicGain); sw.start(t+BAR-0.6); sw.stop(t+BAR+0.15);
+      musicNodes.push(sw);
     }
   }
 
-  setTimeout(function(){ if(musicPlaying) scheduleMusic(startAt+loopLen); },(loopLen-0.12)*1000);
+  setTimeout(function(){ if(musicPlaying) scheduleMusic(startAt+loopLen); },(loopLen-0.15)*1000);
 }
 function startSpinSound(){
   if(!audioCtx) return;
@@ -1210,20 +1178,46 @@ document.addEventListener('keydown', function(e){
 
 function spinReel(idx,finals,dur,cb){
   var t=document.getElementById('t'+idx);
+  var reelEl=document.getElementById('r'+idx);
   t.style.transition='none'; t.style.transform='translateY(0)'; t.innerHTML='';
+
+  // Motion blur + streak while spinning
+  if(reelEl){
+    reelEl.classList.add('spinning-blur','spin-active');
+    reelEl.classList.remove('landing');
+  }
+
   var PAD=16;
   for(var i=0;i<PAD;i++) t.appendChild(makeCell(rndSym()));
   for(var j=0;j<4;j++) t.appendChild(makeCell(finals[j]));
   t.appendChild(makeCell(rndSym()));
-  var target=PAD*CH; // PAD*CH ensures finals[0,1,2] are the 3 visible cells
+  var target=PAD*CH;
+
   requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    t.style.transition='transform '+dur+'ms cubic-bezier(0.25,0.1,0.1,1)';
+    // Slightly springy ease for more life
+    t.style.transition='transform '+dur+'ms cubic-bezier(0.22,1,0.36,1)';
     t.style.transform='translateY(-'+target+'px)';
   }); });
+
   setTimeout(function(){
-    playReelStop(idx); // AUDIO: thunk per reel
+    // Remove blur, trigger bounce
+    if(reelEl){
+      reelEl.classList.remove('spinning-blur','spin-active');
+      reelEl.classList.add('landing');
+      setTimeout(function(){ reelEl.classList.remove('landing'); }, 400);
+    }
+    // Pop animation staggered across 4 visible cells
+    var cells=t.querySelectorAll('.cell');
+    for(var pi=0;pi<4;pi++){
+      (function(ci2){
+        setTimeout(function(){
+          if(cells[PAD+ci2]) cells[PAD+ci2].classList.add('pop');
+        }, ci2*40);
+      })(pi);
+    }
+    playReelStop(idx);
     cb();
-  }, dur+150);
+  }, dur+100);
 }
 
 function onDone(res,wasFree){
@@ -1338,6 +1332,8 @@ function onDone(res,wasFree){
   if(wasFree&&freeSpins===0){
     setTimeout(function(){ updFS(); setMsg('Free Spins complete!','win'); },600);
   }
+  // Light shake on every reel stop
+  shakeMachine(false);
   // Reset Molly counter for next spin
   mollysThisSpin=0;
   document.getElementById('spinBtn').disabled=false;
@@ -1362,6 +1358,16 @@ function showWinBreakdown(lines, total){
   window._wbTimer=setTimeout(function(){ el.classList.remove('show'); },4000);
 }
 
+function shakeMachine(big){
+  var m=document.getElementById('machineEl');
+  if(!m) return;
+  m.classList.remove('shake','shake-big');
+  // Force reflow so animation restarts
+  void m.offsetWidth;
+  m.classList.add(big?'shake-big':'shake');
+  setTimeout(function(){ m.classList.remove('shake','shake-big'); }, big?600:380);
+}
+
 function hideWinBreakdown(){
   document.getElementById('winBreakdown').classList.remove('show');
 }
@@ -1372,13 +1378,13 @@ function doWin(amt,free){
     showWinBreakdown(lastWinLines, amt);
     if(amt>=bet*50){
       setMsg('MEGA WIN!  +$'+amt.toFixed(2),'big');
-      playMegaWin(); fireWinEffects('mega',amt);
+      playMegaWin(); fireWinEffects('mega',amt); shakeMachine(true);
     } else if(amt>=bet*10){
       setMsg('BIG WIN!  +$'+amt.toFixed(2),'win');
-      playBigWin(); fireWinEffects('big',amt);
+      playBigWin(); fireWinEffects('big',amt); shakeMachine(true);
     } else {
       setMsg((free?'Free Spin Win':'You win')+'  $'+amt.toFixed(2),'win');
-      playSmallWin(); fireWinEffects('small',amt);
+      playSmallWin(); fireWinEffects('small',amt); shakeMachine(false);
     }
   } else {
     hideWinBreakdown();
