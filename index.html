@@ -115,6 +115,41 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 @keyframes bostonGlow{from{box-shadow:0 0 0 3px rgba(0,255,68,.5),0 0 28px rgba(0,255,68,.7)}to{box-shadow:0 0 0 4px rgba(0,255,68,.8),0 0 40px rgba(0,255,68,.9),0 0 70px rgba(0,255,68,.4)}}
 .cell.winning img{border-color:#FFD700;box-shadow:0 0 0 3px rgba(255,215,0,.7),0 0 36px rgba(255,215,0,.85);animation:wincell .4s ease-in-out infinite alternate}
 @keyframes wincell{from{transform:scale(1)}to{transform:scale(1.07)}}
+
+/* Molly reel pop announcement */
+.molly-pop{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translateX(-50%) translateY(-50%) scale(0);
+  z-index:20;
+  pointer-events:none;
+  text-align:center;
+  white-space:nowrap;
+}
+.molly-pop span{
+  font-family:'Cinzel Decorative',serif;
+  font-weight:900;
+  color:#FFD700;
+  text-shadow:0 0 20px rgba(255,215,0,0.9),0 0 40px rgba(255,150,0,0.7),2px 2px 0 rgba(0,0,0,0.8);
+  display:block;
+  letter-spacing:3px;
+}
+.molly-pop .paw{
+  font-size:1.4em;
+  display:block;
+  margin-bottom:2px;
+}
+@keyframes mollyPopIn{
+  0%{transform:translateX(-50%) translateY(-50%) scale(0) rotate(-10deg);opacity:0}
+  60%{transform:translateX(-50%) translateY(-50%) scale(1.15) rotate(3deg);opacity:1}
+  80%{transform:translateX(-50%) translateY(-50%) scale(0.95) rotate(-1deg);opacity:1}
+  100%{transform:translateX(-50%) translateY(-50%) scale(1) rotate(0deg);opacity:1}
+}
+@keyframes mollyPopOut{
+  0%{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1}
+  100%{transform:translateX(-50%) translateY(-50%) scale(0.7) translateY(-30px);opacity:0}
+}
 .lbl{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:8px;color:rgba(255,215,0,.9);background:rgba(0,0,0,.82);padding:2px 6px;border-radius:3px;white-space:nowrap;letter-spacing:1px;z-index:6}
 
 /* BOTTOM CONTROLS */
@@ -730,6 +765,8 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
     reelEl.style.transition='box-shadow 0.12s ease-in';
     reelEl.style.boxShadow='0 0 0 4px #FFD700, 0 0 40px rgba(255,215,0,0.85)';
     setTimeout(function(){ reelEl.style.transition='box-shadow 1.0s ease-out'; reelEl.style.boxShadow=''; },900);
+    // MOLLY pop graphic over the reel
+    showMollyPop(reelIdx, mollysThisSpin);
 
     // Tension message
     if(mollysThisSpin===1) setMsg('🐾 MOLLY! Keep spinning…','win');
@@ -741,6 +778,52 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
 
   
   }
+}
+
+// ── Molly reel pop announcement ──────────────────────────────────────────
+function showMollyPop(reelIdx, mollyCount){
+  var reelEl = document.getElementById('r'+reelIdx);
+  if(!reelEl) return;
+
+  // Remove any existing pop on this reel
+  var existing = reelEl.querySelector('.molly-pop');
+  if(existing) reelEl.removeChild(existing);
+
+  // Size and color escalate with each Molly
+  var sizes  = ['32px','40px','52px','62px','72px'];
+  var colors = ['#FFD700','#FFD700','#FF9500','#FF6B00','#FF4400'];
+  var fontSize = sizes[Math.min(mollyCount-1, sizes.length-1)];
+  var color    = colors[Math.min(mollyCount-1, colors.length-1)];
+
+  var pop = document.createElement('div');
+  pop.className = 'molly-pop';
+
+  var paw  = document.createElement('span');
+  paw.className = 'paw';
+  paw.textContent = '🐾';
+  paw.style.fontSize = fontSize;
+
+  var lbl = document.createElement('span');
+  lbl.textContent = mollyCount >= 3 ? 'MOLLY!!' : 'MOLLY!';
+  lbl.style.fontSize = fontSize;
+  lbl.style.color = color;
+  lbl.style.textShadow = '0 0 20px '+color+',0 0 40px rgba(255,150,0,0.7),2px 2px 0 rgba(0,0,0,0.8)';
+
+  pop.appendChild(paw);
+  pop.appendChild(lbl);
+  reelEl.appendChild(pop);
+
+  // Pop in animation
+  pop.style.animation = 'mollyPopIn 0.4s cubic-bezier(0.175,0.885,0.32,1.6) forwards';
+
+  // Hold, then pop out
+  var holdTime = mollyCount >= 3 ? 1600 : 900;
+  setTimeout(function(){
+    pop.style.animation = 'mollyPopOut 0.35s ease-in forwards';
+    setTimeout(function(){
+      if(pop.parentNode) pop.parentNode.removeChild(pop);
+    }, 380);
+  }, holdTime);
 }
 
 // Deflation sound — descending tone when bonus chance is gone
