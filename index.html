@@ -66,9 +66,9 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 
 /* REELS */
 .reels-wrap{background:linear-gradient(180deg,rgba(0,0,0,.83),rgba(5,0,10,.93));border-radius:14px;padding:10px 8px 8px;margin-bottom:12px;border:1px solid rgba(200,168,76,.16);box-shadow:inset 0 0 50px rgba(0,0,0,.85),0 0 0 1px rgba(100,60,10,.35);position:relative}
-.payline-bar{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:128px;border:1px solid rgba(255,215,0,.2);border-radius:8px;pointer-events:none;z-index:10}
+.payline-bar{position:absolute;left:8px;right:8px;top:25%;height:256px;border:1px solid rgba(255,215,0,.2);border-radius:8px;pointer-events:none;z-index:10}
 .reels{display:flex;gap:4px}
-.reel{flex:1;height:384px;overflow:hidden;border-radius:10px;background:#000;position:relative;border:1px solid rgba(255,255,255,.04);box-shadow:inset 0 0 25px rgba(0,0,0,.95)}
+.reel{flex:1;height:512px;overflow:hidden;border-radius:10px;background:#000;position:relative;border:1px solid rgba(255,255,255,.04);box-shadow:inset 0 0 25px rgba(0,0,0,.95)}
 .track{display:flex;flex-direction:column}
 .cell{height:128px;min-height:128px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;padding:4px}
 .cell img{width:116px;height:116px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.09);display:block;box-shadow:0 4px 14px rgba(0,0,0,.6);transition:all .2s}
@@ -81,7 +81,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .lbl{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:8px;color:rgba(255,215,0,.9);background:rgba(0,0,0,.82);padding:2px 6px;border-radius:3px;white-space:nowrap;letter-spacing:1px;z-index:6}
 
 /* BOTTOM CONTROLS */
-.controls-row{display:grid;grid-template-columns:210px auto 210px;gap:10px;align-items:stretch}
+.controls-row{display:grid;grid-template-columns:210px 160px 210px;gap:10px;align-items:stretch;justify-content:center}
 .ctrl-panel{background:rgba(0,0,0,.45);border:1px solid rgba(200,168,76,.22);border-radius:10px;padding:10px 14px;position:relative;overflow:hidden}
 .ctrl-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4),transparent)}
 .ctrl-label{font-family:'Cinzel',serif;font-size:8px;color:#7a6030;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px}
@@ -98,7 +98,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .fs-active-label{font-family:'Cinzel',serif;font-size:10px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:5px}
 .fs-count{font-family:'Playfair Display',serif;font-size:36px;color:#FFD700;font-weight:700;line-height:1;display:block;margin-bottom:3px}
 .fs-mult{font-family:'Cinzel',serif;font-size:13px;color:#FFD700;letter-spacing:2px}
-.spinbtn{font-family:'Cinzel Decorative',serif;font-size:16px;font-weight:700;background:linear-gradient(135deg,#8B0000 0%,#CC0000 40%,#8B0000 100%);color:#fff8e0;border:none;border-radius:12px;cursor:pointer;letter-spacing:2px;position:relative;overflow:hidden;transition:all .12s;box-shadow:0 4px 0 #4a0000,0 6px 22px rgba(150,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22);text-shadow:0 1px 4px rgba(0,0,0,.5);padding:0 24px;white-space:nowrap}
+.spinbtn{font-family:'Cinzel Decorative',serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#8B0000 0%,#CC0000 40%,#8B0000 100%);color:#fff8e0;border:none;border-radius:12px;cursor:pointer;letter-spacing:1px;position:relative;overflow:hidden;transition:all .12s;box-shadow:0 4px 0 #4a0000,0 6px 22px rgba(150,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22);text-shadow:0 1px 4px rgba(0,0,0,.5);width:100%;white-space:nowrap}
 .spinbtn::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:shimmer 2.5s infinite}
 @keyframes shimmer{to{left:200%}}
 .spinbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 0 #4a0000,0 10px 30px rgba(200,0,0,.5),inset 0 1px 0 rgba(255,150,150,.22)}
@@ -182,7 +182,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 @media(max-width:750px){
   .top-bar{grid-template-columns:1fr 1fr;grid-template-rows:auto auto}
   .result-box{grid-column:1/-1}
-  .reel{height:270px}.cell{height:90px;min-height:90px}.cell img{width:78px;height:78px}.payline-bar{height:90px}
+  .reel{height:360px}.cell{height:90px;min-height:90px}.cell img{width:78px;height:78px}.payline-bar{top:25%;height:180px}
   .controls-row{grid-template-columns:1fr;grid-template-rows:auto auto auto}
   .spinbtn{padding:14px}
   .pt-row{flex-wrap:wrap}.pr{max-width:calc(33% - 6px)}
@@ -726,7 +726,7 @@ var mollysThisSpin=0;   // running count for sound escalation
 
 function checkMollyLand(res,reelIdx,doneCount,wasFree){
   if(wasFree||stickyActive) return;
-  var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0;
+  var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0||res[reelIdx][3]===0;
 
   if(hasMolly){
     mollysThisSpin++;
@@ -800,7 +800,7 @@ function doStickyRespin(res, scatterCount, lockedReels, freeReels, spinsLeft){
         spinReel(ri, newRes[ri], 800+pos*100, function(){
           stopSpinSound();
           done++;
-          var hasMolly=newRes[ri][0]===0||newRes[ri][1]===0||newRes[ri][2]===0;
+          var hasMolly=newRes[ri][0]===0||newRes[ri][1]===0||newRes[ri][2]===0||newRes[ri][3]===0;
           if(hasMolly){
             mollysThisSpin++;
             playMollyLand(mollysThisSpin);
@@ -813,7 +813,7 @@ function doStickyRespin(res, scatterCount, lockedReels, freeReels, spinsLeft){
             // Recalculate all locked reels after this spin
             var newLocked=[];
             for(var r=0;r<5;r++){
-              if(newRes[r][0]===0||newRes[r][1]===0||newRes[r][2]===0) newLocked.push(r);
+              if(newRes[r][0]===0||newRes[r][1]===0||newRes[r][2]===0||newRes[r][3]===0) newLocked.push(r);
             }
             var newTotal=newLocked.length;
 
@@ -1034,18 +1034,13 @@ function rndSym(){ var r=Math.random()*WS,s=0; for(var i=0;i<SYM.length;i++){s+=
 function rndCol(allowMolly){
   var col=[];
   var used={};   // track all symbols placed on this reel — no duplicates
-  for(var rw=0;rw<3;rw++){
+  for(var rw=0;rw<4;rw++){  // 4 rows now
     var s=rndSym();
     var attempts=0;
-    // Reroll if: duplicate symbol, OR Molly not allowed, OR Trump wild duplicated
-    while(attempts<40 && (
-      used[s]===true ||
-      (s===0 && !allowMolly)
-    )){
+    while(attempts<40 && (used[s]===true || (s===0 && !allowMolly))){
       s=rndSym();
       attempts++;
     }
-    // Safety fallback: if we somehow can't find a unique symbol, just use what we have
     used[s]=true;
     col.push(s);
   }
@@ -1054,7 +1049,7 @@ function rndCol(allowMolly){
 
 var bal=100,bet=1,spinning=false,freeSpins=0,freeMult=1;
 var lastWinLines=[];
-var CH=128;
+var CH=128; // 4 rows × 128px = 512px reel height
 
 // Paytable
 (function(){
@@ -1179,7 +1174,7 @@ function doSpin(){
     spinReel(reelIdx, res[reelIdx], baseDur, function(){
       reelsDone++;
       // Check if this reel has a Molly (any row)
-      var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0;
+      var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0||res[reelIdx][3]===0;
       if(hasMolly) mollysSoFar++;
 
       // Trigger Molly land effects
@@ -1218,7 +1213,7 @@ function spinReel(idx,finals,dur,cb){
   t.style.transition='none'; t.style.transform='translateY(0)'; t.innerHTML='';
   var PAD=16;
   for(var i=0;i<PAD;i++) t.appendChild(makeCell(rndSym()));
-  for(var j=0;j<3;j++) t.appendChild(makeCell(finals[j]));
+  for(var j=0;j<4;j++) t.appendChild(makeCell(finals[j]));
   t.appendChild(makeCell(rndSym()));
   var target=PAD*CH; // PAD*CH ensures finals[0,1,2] are the 3 visible cells
   requestAnimationFrame(function(){ requestAnimationFrame(function(){
@@ -1239,7 +1234,7 @@ function onDone(res,wasFree){
   // But track which reels have a Molly (for sticky lock) using center-row or any-row presence
   var mollyReels=[];
   for(var r=0;r<5;r++){
-    if(res[r][0]===0||res[r][1]===0||res[r][2]===0) mollyReels.push(r);
+    if(res[r][0]===0||res[r][1]===0||res[r][2]===0||res[r][3]===0) mollyReels.push(r);
   }
   var scatterCount=mollyReels.length;
 
@@ -1251,7 +1246,7 @@ function onDone(res,wasFree){
 
   var rowNames=['Top','Center','Bottom'];
 
-  for(var row=0;row<3;row++){
+  for(var row=0;row<4;row++){
     for(var s=2;s<SYM.length;s++){
       var cnt=0, cols=[];
       for(var r3=0;r3<5;r3++){
@@ -1281,7 +1276,7 @@ function onDone(res,wasFree){
   var bostonFound=false;
   var bostonCells=[];
   for(var br=0;br<5;br++){
-    for(var brow=0;brow<3;brow++){
+    for(var brow=0;brow<4;brow++){
       if(res[br][brow]===2){
         bostonFound=true;
         bostonCells.push({reel:br,row:brow});
