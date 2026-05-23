@@ -451,6 +451,746 @@ function fireParticles(n){
     },delay);})(i*45);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// SOUND ENGINE - Web Audio API
+// ═══════════════════════════════════════════════════════════════════
+
+var AudioCtx = window.AudioContext || window.webkitAudioContext;
+var ctx = null;
+var masterGain = null;
+var musicGain = null;
+var sfxGain = null;
+var muted = false;
+
+// Music state
+var musicNodes = [];
+var musicPlaying = false;
+var musicScheduled = false;
+
+// ── Init audio context (must be after user gesture) ──
+function initAudio() {
+  if (ctx) return;
+  ctx = new AudioCtx();
+  masterGain = ctx.createGain();
+  masterGain.gain.value = 1.0;
+  masterGain.connect(ctx.destination);
+
+  musicGain = ctx.createGain();
+  musicGain.gain.value = 0.28;
+  musicGain.connect(masterGain);
+
+  sfxGain = ctx.createGain();
+  sfxGain.gain.value = 0.7;
+  sfxGain.connect(masterGain);
+}
+
+// ── Mute button ──
+function toggleMute() {
+  muted = !muted;
+  if (ctx) masterGain.gain.value = muted ? 0 : 1.0;
+  var btn = document.getElementById('muteBtn');
+  btn.textContent = muted ? '🔇' : '🔊';
+  btn.style.opacity = muted ? '0.5' : '1';
+}
+
+// ── Helper: create oscillator ──
+function osc(type, freq, startTime, duration, gainVal, gainNode) {
+  var o = ctx.createOscillator();
+  var g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, startTime);
+  g.gain.setValueAtTime(0, startTime);
+  g.gain.linearRampToValueAtTime(gainVal, startTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  o.connect(g);
+  g.connect(gainNode || sfxGain);
+  o.start(startTime);
+  o.stop(startTime + duration + 0.05);
+  return { osc: o, gain: g };
+}
+
+// ── Helper: noise burst ──
+function noiseBurst(startTime, duration, gainVal, filterFreq) {
+  var bufSize = ctx.sampleRate * duration;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  var src = ctx.createBufferSource();
+  src.buffer = buf;
+  var filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = filterFreq || 800;
+  filter.Q.value = 0.8;
+  var g = ctx.createGain();
+  g.gain.setValueAtTime(gainVal, startTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(sfxGain);
+  src.start(startTime);
+  src.stop(startTime + duration + 0.05);
+}
+
+// ═══════════════════════════════
+// 1. BACKGROUND MUSIC
+// Loop: jazzy minor pentatonic, layered bass + chords + sparkle
+// ═══════════════════════════════
+var CHORD_PROGRESSION = [
+  // [bass, mid1, mid2, high] frequencies - Dm7 / Am7 / Gm7 / Am7
+  [73.4, 220, 261.6, 329.6],   // D minor feel
+  [55.0, 196, 246.9, 293.7],   // Am
+  [49.0, 185, 233.1, 293.7],   // Gm
+  [55.0, 196, 246.9, 329.6],   // Am high
+];
+
+function startMusic() {
+  if (!ctx || musicPlaying) return;
+  musicPlaying = true;
+  scheduleMusic(ctx.currentTime);
+}
+
+function scheduleMusic(startAt) {
+  if (!musicPlaying || muted) return;
+  var beatLen = 0.55;  // tempo
+  var barLen = beatLen * 8;
+  var totalBars = CHORD_PROGRESSION.length;
+  var loopLen = barLen * totalBars;
+
+  for (var ci = 0; ci < totalBars; ci++) {
+    var chord = CHORD_PROGRESSION[ci];
+    var t = startAt + ci * barLen;
+
+    // Bass note - slow attack, held
+    var bassO = ctx.createOscillator();
+    var bassG = ctx.createGain();
+    bassO.type = 'triangle';
+    bassO.frequency.value = chord[0];
+    bassG.gain.setValueAtTime(0, t);
+    bassG.gain.linearRampToValueAtTime(0.9, t + 0.3);
+    bassG.gain.setValueAtTime(0.9, t + barLen - 0.2);
+    bassG.gain.linearRampToValueAtTime(0, t + barLen);
+    bassO.connect(bassG);
+    bassG.connect(musicGain);
+    bassO.start(t);
+    bassO.stop(t + barLen + 0.1);
+    musicNodes.push(bassO);
+
+    // Mid chord tones - arpeggiated
+    for (var mi = 1; mi <= 3; mi++) {
+      (function(freq, offset) {
+        var mo = ctx.createOscillator();
+        var mg = ctx.createGain();
+        mo.type = 'sine';
+        mo.frequency.value = freq;
+        var tNote = t + offset * beatLen * 0.5;
+        mg.gain.setValueAtTime(0, tNote);
+        mg.gain.linearRampToValueAtTime(0.35, tNote + 0.08);
+        mg.gain.exponentialRampToValueAtTime(0.0001, tNote + barLen * 0.85);
+        mo.connect(mg);
+        mg.connect(musicGain);
+        mo.start(tNote);
+        mo.stop(tNote + barLen);
+        musicNodes.push(mo);
+      })(chord[mi], mi);
+    }
+
+    // Sparkle high notes - random pentatonic hits
+    var pentatonic = [329.6, 392, 440, 493.9, 587.3, 659.3];
+    for (var pi = 0; pi < 3; pi++) {
+      (function(beat) {
+        var freq = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+        var tSpark = t + beat * beatLen + Math.random() * 0.1;
+        var so = ctx.createOscillator();
+        var sg = ctx.createGain();
+        so.type = 'sine';
+        so.frequency.value = freq * 2; // octave up
+        sg.gain.setValueAtTime(0, tSpark);
+        sg.gain.linearRampToValueAtTime(0.12, tSpark + 0.02);
+        sg.gain.exponentialRampToValueAtTime(0.0001, tSpark + 0.4);
+        so.connect(sg);
+        sg.connect(musicGain);
+        so.start(tSpark);
+        so.stop(tSpark + 0.5);
+        musicNodes.push(so);
+      })(pi * 2 + 1 + ci);
+    }
+
+    // Subtle hi-hat clicks on beats
+    for (var bi = 0; bi < 8; bi++) {
+      (function(b) {
+        var tHat = t + b * beatLen;
+        var bufSize = Math.floor(ctx.sampleRate * 0.04);
+        var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+        var d = buf.getChannelData(0);
+        for (var k = 0; k < bufSize; k++) d[k] = (Math.random() * 2 - 1) * (1 - k/bufSize);
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        var hf = ctx.createBiquadFilter();
+        hf.type = 'highpass';
+        hf.frequency.value = 8000;
+        var hg = ctx.createGain();
+        hg.gain.value = b % 2 === 0 ? 0.12 : 0.06; // accent on 1,3,5,7
+        src.connect(hf);
+        hf.connect(hg);
+        hg.connect(musicGain);
+        src.start(tHat);
+        src.stop(tHat + 0.05);
+        musicNodes.push(src);
+      })(bi);
+    }
+  }
+
+  // Schedule next loop
+  var loopTimeout = (loopLen - 0.1) * 1000;
+  setTimeout(function() {
+    if (musicPlaying) scheduleMusic(startAt + loopLen);
+  }, loopTimeout);
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  musicNodes.forEach(function(n) {
+    try { n.stop(); } catch(e) {}
+  });
+  musicNodes = [];
+}
+
+// ═══════════════════════════════
+// 2. SPIN SOUND
+// Mechanical whirring noise - starts on spin, cuts on last reel stop
+// ═══════════════════════════════
+var spinNoiseNode = null;
+var spinNoiseGain = null;
+
+function startSpinSound() {
+  if (!ctx) return;
+  stopSpinSound();
+  // White noise through a bandpass filter, slowly sweeping
+  var bufSize = ctx.sampleRate * 2;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var d = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+  spinNoiseNode = ctx.createBufferSource();
+  spinNoiseNode.buffer = buf;
+  spinNoiseNode.loop = true;
+
+  var filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(600, ctx.currentTime);
+  filter.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 1.5);
+  filter.Q.value = 1.5;
+
+  // Add a slight wobble oscillator for mechanical feel
+  var wobble = ctx.createOscillator();
+  var wobbleGain = ctx.createGain();
+  wobble.frequency.value = 18;
+  wobbleGain.gain.value = 80;
+  wobble.connect(wobbleGain);
+  wobbleGain.connect(filter.frequency);
+  wobble.start();
+
+  spinNoiseGain = ctx.createGain();
+  spinNoiseGain.gain.setValueAtTime(0, ctx.currentTime);
+  spinNoiseGain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.15);
+
+  spinNoiseNode.connect(filter);
+  filter.connect(spinNoiseGain);
+  spinNoiseGain.connect(sfxGain);
+  spinNoiseNode.start();
+  wobble.stop(ctx.currentTime + 3);
+}
+
+function stopSpinSound() {
+  if (spinNoiseGain) {
+    spinNoiseGain.gain.setValueAtTime(spinNoiseGain.gain.value, ctx.currentTime);
+    spinNoiseGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+  }
+  if (spinNoiseNode) {
+    try { spinNoiseNode.stop(ctx.currentTime + 0.2); } catch(e) {}
+    spinNoiseNode = null;
+  }
+}
+
+// ═══════════════════════════════
+// 3. REEL STOP THUNK
+// Short percussive hit - fired per reel landing
+// ═══════════════════════════════
+function playReelStop(reelIndex) {
+  if (!ctx) return;
+  var t = ctx.currentTime;
+  var pitch = 120 - reelIndex * 8; // slightly lower pitch each reel
+
+  // Thunk: sine drop
+  var o = ctx.createOscillator();
+  var g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(pitch * 2, t);
+  o.frequency.exponentialRampToValueAtTime(pitch * 0.5, t + 0.08);
+  g.gain.setValueAtTime(0.7, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(g);
+  g.connect(sfxGain);
+  o.start(t);
+  o.stop(t + 0.15);
+
+  // Click transient
+  noiseBurst(t, 0.04, 0.3, 2000);
+}
+
+// ═══════════════════════════════
+// 4. SMALL WIN CHIME
+// Bright 3-note ascending bell
+// ═══════════════════════════════
+function playSmallWin() {
+  if (!ctx) return;
+  var notes = [523.3, 659.3, 783.9]; // C, E, G
+  notes.forEach(function(freq, i) {
+    var t = ctx.currentTime + i * 0.12;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.5, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g);
+    g.connect(sfxGain);
+    o.start(t);
+    o.stop(t + 0.65);
+
+    // Bell shimmer - octave up, quiet
+    var o2 = ctx.createOscillator();
+    var g2 = ctx.createGain();
+    o2.type = 'sine';
+    o2.frequency.value = freq * 2;
+    g2.gain.setValueAtTime(0, t);
+    g2.gain.linearRampToValueAtTime(0.15, t + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o2.connect(g2);
+    g2.connect(sfxGain);
+    o2.start(t);
+    o2.stop(t + 0.45);
+  });
+}
+
+// ═══════════════════════════════
+// 5. BIG WIN FANFARE
+// Rapid ascending arpeggio + hold
+// ═══════════════════════════════
+function playBigWin() {
+  if (!ctx) return;
+  var notes = [261.6, 329.6, 392, 523.3, 659.3, 783.9, 1046.5];
+  notes.forEach(function(freq, i) {
+    var t = ctx.currentTime + i * 0.07;
+    osc('sine', freq, t, 0.8, 0.55);
+    osc('sine', freq * 2, t, 0.5, 0.18);
+  });
+  // Final big chord
+  var tChord = ctx.currentTime + notes.length * 0.07;
+  [261.6, 329.6, 392, 523.3].forEach(function(f) {
+    osc('sine', f, tChord, 1.5, 0.45);
+    osc('triangle', f * 2, tChord, 1.2, 0.15);
+  });
+  // Shimmer on chord
+  noiseBurst(tChord, 0.3, 0.2, 3000);
+}
+
+// ═══════════════════════════════
+// 6. MEGA WIN - even bigger
+// ═══════════════════════════════
+function playMegaWin() {
+  if (!ctx) return;
+  playBigWin();
+  // Extra high stab after a beat
+  setTimeout(function() {
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    [1046.5, 1318.5, 1568].forEach(function(f, i) {
+      osc('sine', f, t + i * 0.1, 1.0, 0.4);
+    });
+    noiseBurst(t, 0.5, 0.35, 4000);
+  }, 600);
+}
+
+// ═══════════════════════════════
+// 7. SCATTER / MOLLY BONUS TRIGGER
+// Dramatic rising sweep + sparkle burst
+// ═══════════════════════════════
+function playScatterTrigger() {
+  if (!ctx) return;
+  var t = ctx.currentTime;
+
+  // Rising sweep
+  var sweep = ctx.createOscillator();
+  var sweepGain = ctx.createGain();
+  sweep.type = 'sawtooth';
+  sweep.frequency.setValueAtTime(200, t);
+  sweep.frequency.exponentialRampToValueAtTime(1800, t + 0.8);
+  sweepGain.gain.setValueAtTime(0, t);
+  sweepGain.gain.linearRampToValueAtTime(0.3, t + 0.1);
+  sweepGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+  sweep.connect(sweepGain);
+  sweepGain.connect(sfxGain);
+  sweep.start(t);
+  sweep.stop(t + 0.9);
+
+  // Sparkle burst of high bells after sweep
+  var sparkNotes = [880, 1046.5, 1318.5, 1568, 1760];
+  sparkNotes.forEach(function(freq, i) {
+    var ts = t + 0.7 + i * 0.06;
+    osc('sine', freq, ts, 0.5, 0.35);
+  });
+
+  // Low boom underneath
+  osc('sine', 80, t + 0.5, 0.6, 0.6);
+  noiseBurst(t + 0.5, 0.4, 0.25, 300);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// WIRE SOUNDS INTO GAME EVENTS
+// ═══════════════════════════════════════════════════════════════════
+
+// Override doSpin to add sound
+var _origDoSpin = doSpin;
+doSpin = function() {
+  initAudio();
+  if (!musicPlaying) startMusic();
+  startSpinSound();
+  _origDoSpin();
+};
+
+// Override spinReel to add per-reel stop sound
+var _origSpinReel = spinReel;
+spinReel = function(idx, finals, dur, cb) {
+  _origSpinReel(idx, finals, dur, function() {
+    playReelStop(idx);
+    cb();
+  });
+};
+
+// Override doWin to add win sounds
+var _origDoWin = doWin;
+doWin = function(amt, free) {
+  stopSpinSound();
+  if (amt > 0) {
+    if (amt >= bet * 50) {
+      playMegaWin();
+    } else if (amt >= bet * 10) {
+      playBigWin();
+    } else {
+      playSmallWin();
+    }
+  }
+  _origDoWin(amt, free);
+};
+
+// Override onDone to stop spin sound and handle scatter
+var _origOnDone = onDone;
+onDone = function(res, wasFree) {
+  stopSpinSound();
+  // Check scatter before calling original
+  var scatters = 0;
+  for (var r = 0; r < 5; r++) for (var rw = 0; rw < 3; rw++) if (res[r][rw] === 0) scatters++;
+  if (scatters >= 3 && !wasFree) {
+    playScatterTrigger();
+  }
+  _origOnDone(res, wasFree);
+};
+
+// Mute button HTML injection
+(function() {
+  var btn = document.createElement('button');
+  btn.id = 'muteBtn';
+  btn.textContent = '🔊';
+  btn.title = 'Toggle sound';
+  btn.style.cssText = [
+    'position:fixed',
+    'bottom:18px',
+    'right:18px',
+    'z-index:200',
+    'background:rgba(15,10,25,0.88)',
+    'border:1px solid rgba(200,168,76,0.4)',
+    'border-radius:50%',
+    'width:42px',
+    'height:42px',
+    'font-size:18px',
+    'cursor:pointer',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'box-shadow:0 0 0 1px rgba(200,160,60,0.3),0 4px 12px rgba(0,0,0,0.6)',
+    'transition:all 0.2s',
+    'line-height:1'
+  ].join(';');
+  btn.addEventListener('click', toggleMute);
+  btn.addEventListener('mouseenter', function() { this.style.borderColor='rgba(255,215,0,0.7)'; });
+  btn.addEventListener('mouseleave', function() { this.style.borderColor='rgba(200,168,76,0.4)'; });
+  document.body.appendChild(btn);
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// WIN VISUALS ENGINE
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Flash overlay (full screen gold flash) ──
+var flashEl = document.createElement('div');
+flashEl.style.cssText = [
+  'position:fixed','inset:0','z-index:150','pointer-events:none',
+  'opacity:0','transition:opacity 0.08s ease-out',
+  'background:radial-gradient(circle at center, rgba(255,215,0,0.45) 0%, rgba(200,100,0,0.2) 50%, transparent 75%)'
+].join(';');
+document.body.appendChild(flashEl);
+
+function flashScreen(intensity, duration) {
+  flashEl.style.transition = 'opacity 0.06s ease-in';
+  flashEl.style.opacity = intensity;
+  setTimeout(function() {
+    flashEl.style.transition = 'opacity ' + (duration || 400) + 'ms ease-out';
+    flashEl.style.opacity = 0;
+  }, 80);
+}
+
+// ── Machine border glow ──
+var machineEl = document.querySelector('.machine');
+function glowMachine(color, duration) {
+  if (!machineEl) return;
+  machineEl.style.transition = 'box-shadow 0.1s ease-in';
+  machineEl.style.boxShadow = [
+    '0 0 0 1px rgba(200,160,60,.45)',
+    '0 0 0 3px rgba(100,60,10,.6)',
+    '0 0 80px ' + color,
+    '0 0 120px ' + color,
+    'inset 0 1px 0 rgba(255,220,100,.1)'
+  ].join(',');
+  setTimeout(function() {
+    machineEl.style.transition = 'box-shadow 1.2s ease-out';
+    machineEl.style.boxShadow = [
+      '0 0 0 1px rgba(200,160,60,.45)',
+      '0 0 0 3px rgba(100,60,10,.6)',
+      '0 0 50px rgba(0,0,0,.9)',
+      'inset 0 1px 0 rgba(255,220,100,.1)'
+    ].join(',');
+  }, duration || 600);
+}
+
+// ── Particle system ──
+var particleContainer = document.getElementById('particles');
+
+var SHAPES = ['coin', 'star', 'diamond', 'spark'];
+
+function createParticle(x, y, opts) {
+  opts = opts || {};
+  var shape = opts.shape || SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  var color = opts.color || ['#FFD700','#FFF8E0','#FF6B6B','#c8a84c','#ffffff','#ffe066','#ff9500'][Math.floor(Math.random() * 7)];
+  var size = opts.size || (8 + Math.random() * 14);
+  var vx = (Math.random() - 0.5) * (opts.spread || 12);
+  var vy = -(8 + Math.random() * (opts.upForce || 16));
+  var gravity = opts.gravity || 0.45;
+  var life = opts.life || (1200 + Math.random() * 800);
+  var rotation = Math.random() * 360;
+  var rotSpeed = (Math.random() - 0.5) * 12;
+
+  var el = document.createElement('div');
+  el.style.cssText = [
+    'position:absolute',
+    'left:' + x + 'px',
+    'top:' + y + 'px',
+    'width:' + size + 'px',
+    'height:' + size + 'px',
+    'pointer-events:none',
+    'z-index:155',
+    'will-change:transform'
+  ].join(';');
+
+  if (shape === 'coin') {
+    el.style.cssText += ';border-radius:50%;background:radial-gradient(circle at 35% 35%,' + color + ',#8a6010);border:1px solid rgba(255,255,255,0.3);box-shadow:0 0 4px rgba(255,215,0,0.6)';
+  } else if (shape === 'star') {
+    el.style.cssText += ';background:' + color + ';clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)';
+  } else if (shape === 'diamond') {
+    el.style.cssText += ';background:linear-gradient(135deg,' + color + ',rgba(255,255,255,0.8));transform:rotate(45deg);border-radius:2px';
+  } else {
+    el.style.cssText += ';background:' + color + ';border-radius:2px;width:' + (size * 0.3) + 'px';
+  }
+
+  particleContainer.appendChild(el);
+
+  var startTime = performance.now();
+  var currX = x, currY = y, currVY = vy;
+
+  function animate(now) {
+    var elapsed = now - startTime;
+    if (elapsed >= life) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      return;
+    }
+    currVY += gravity;
+    vx *= 0.99;
+    currX += vx;
+    currY += currVY;
+    rotation += rotSpeed;
+    var alpha = elapsed < life * 0.7 ? 1 : 1 - (elapsed - life * 0.7) / (life * 0.3);
+    el.style.left = currX + 'px';
+    el.style.top = currY + 'px';
+    el.style.opacity = alpha;
+    if (shape !== 'diamond') {
+      el.style.transform = 'rotate(' + rotation + 'deg)';
+    } else {
+      el.style.transform = 'rotate(' + (45 + rotation) + 'deg)';
+    }
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
+
+function burstFromCenter(count, opts) {
+  var cx = window.innerWidth / 2;
+  var cy = window.innerHeight * 0.45;
+  for (var i = 0; i < count; i++) {
+    (function(i) {
+      setTimeout(function() {
+        createParticle(cx + (Math.random() - 0.5) * 200, cy, opts);
+      }, i * 18);
+    })(i);
+  }
+}
+
+function rainFromTop(count, opts, durationMs) {
+  for (var i = 0; i < count; i++) {
+    (function(i) {
+      setTimeout(function() {
+        var x = Math.random() * window.innerWidth;
+        createParticle(x, -10, Object.assign({}, opts, {
+          vy: 0,
+          upForce: 0,
+          gravity: opts && opts.gravity || 0.55,
+          spread: (Math.random() - 0.5) * 4
+        }));
+      }, Math.random() * (durationMs || 1000));
+    })(i);
+  }
+}
+
+// ── Big win text overlay ──
+var winTextEl = document.createElement('div');
+winTextEl.style.cssText = [
+  'position:fixed','top:0','left:0','right:0','bottom:0',
+  'display:flex','align-items:center','justify-content:center',
+  'z-index:160','pointer-events:none','opacity:0'
+].join(';');
+document.body.appendChild(winTextEl);
+
+var winTextInner = document.createElement('div');
+winTextInner.style.cssText = [
+  'font-family:"Cinzel Decorative",serif',
+  'font-size:clamp(36px,8vw,90px)',
+  'font-weight:900',
+  'text-align:center',
+  'line-height:1.1',
+  'text-shadow:0 0 40px rgba(255,215,0,0.9),0 0 80px rgba(255,150,0,0.6),4px 4px 0 rgba(0,0,0,0.5)',
+  'letter-spacing:4px',
+  'transform:scale(0.3)',
+  'transition:transform 0.25s cubic-bezier(0.175,0.885,0.32,1.6),opacity 0.15s ease',
+  'padding:20px 40px',
+  'background:rgba(0,0,0,0.5)',
+  'border-radius:20px',
+  'border:2px solid rgba(255,215,0,0.4)',
+  'backdrop-filter:blur(6px)'
+].join(';');
+winTextEl.appendChild(winTextInner);
+
+function showWinText(text, color, duration) {
+  winTextInner.textContent = text;
+  winTextInner.style.color = color || '#FFD700';
+  winTextEl.style.opacity = '1';
+  winTextInner.style.transform = 'scale(0.3)';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      winTextInner.style.transform = 'scale(1)';
+    });
+  });
+  setTimeout(function() {
+    winTextEl.style.transition = 'opacity 0.5s ease-out';
+    winTextEl.style.opacity = '0';
+    winTextInner.style.transition = 'transform 0.4s ease-in,opacity 0.15s ease';
+    winTextInner.style.transform = 'scale(1.3)';
+    setTimeout(function() {
+      winTextEl.style.transition = '';
+      winTextInner.style.transition = 'transform 0.25s cubic-bezier(0.175,0.885,0.32,1.6),opacity 0.15s ease';
+    }, 600);
+  }, duration || 1800);
+}
+
+// ── Pulse animation for big wins ──
+function pulseMachine(times, color) {
+  var count = 0;
+  var interval = setInterval(function() {
+    glowMachine(color, 300);
+    count++;
+    if (count >= times) clearInterval(interval);
+  }, 350);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OVERRIDE fireParticles WITH NEW TIERED SYSTEM
+// ═══════════════════════════════════════════════════════════════════
+
+// Replace the old fireParticles
+fireParticles = function(level) {
+  // level: 12 = small, 28 = big, 55 = mega
+  if (level <= 12) {
+    // Small win: coin shower + small flash
+    flashScreen(0.3, 300);
+    glowMachine('rgba(255,215,0,0.4)', 800);
+    burstFromCenter(18, { shape: 'coin', size: 10, upForce: 14, spread: 10, life: 1400, gravity: 0.4 });
+    burstFromCenter(10, { shape: 'star', size: 8, upForce: 12, spread: 14, life: 1200, gravity: 0.38 });
+
+  } else if (level <= 28) {
+    // Big win: burst + rain + flash + glow + text
+    flashScreen(0.55, 500);
+    glowMachine('rgba(255,180,0,0.7)', 1200);
+    showWinText('BIG WIN!', '#FFD700', 2000);
+    pulseMachine(3, 'rgba(255,180,0,0.6)');
+
+    // Central burst
+    burstFromCenter(40, { shape: 'coin', size: 12, upForce: 20, spread: 16, life: 1800, gravity: 0.38 });
+    burstFromCenter(25, { shape: 'star', size: 10, upForce: 18, spread: 20, life: 1600, gravity: 0.35 });
+    burstFromCenter(20, { shape: 'diamond', size: 8, upForce: 16, spread: 18, life: 1400, gravity: 0.4 });
+
+    // Rain from top
+    rainFromTop(30, { shape: 'coin', size: 10, gravity: 0.5, life: 1800 }, 800);
+
+  } else {
+    // MEGA WIN: everything + extra waves + massive text
+    flashScreen(0.85, 800);
+    glowMachine('rgba(255,100,0,0.9)', 2000);
+    showWinText('MEGA WIN!!!', '#FF9500', 3000);
+    pulseMachine(6, 'rgba(255,120,0,0.75)');
+
+    // Massive central burst - wave 1
+    burstFromCenter(60, { shape: 'coin', size: 14, upForce: 24, spread: 20, life: 2400, gravity: 0.35 });
+    burstFromCenter(40, { shape: 'star', size: 12, upForce: 22, spread: 24, life: 2200, gravity: 0.32 });
+    burstFromCenter(30, { shape: 'diamond', size: 10, upForce: 20, spread: 22, life: 2000, gravity: 0.38 });
+    burstFromCenter(20, { shape: 'spark', size: 6, upForce: 26, spread: 28, life: 1600, gravity: 0.28 });
+
+    // Wave 2 - delayed
+    setTimeout(function() {
+      flashScreen(0.5, 400);
+      burstFromCenter(50, { shape: 'coin', size: 12, upForce: 22, spread: 22, life: 2000, gravity: 0.36 });
+      burstFromCenter(30, { shape: 'star', size: 10, upForce: 20, spread: 26, life: 1800, gravity: 0.33 });
+    }, 500);
+
+    // Wave 3 - more delayed
+    setTimeout(function() {
+      flashScreen(0.4, 300);
+      burstFromCenter(40, { shape: 'coin', size: 11, upForce: 20, spread: 20, life: 1800, gravity: 0.37 });
+    }, 1000);
+
+    // Sustained rain from top
+    rainFromTop(80, { shape: 'coin', size: 11, gravity: 0.48, life: 2200 }, 2500);
+    rainFromTop(40, { shape: 'star', size: 9, gravity: 0.44, life: 2000 }, 2000);
+  }
+};
 </script>
 </body>
 </html>
