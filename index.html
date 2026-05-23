@@ -371,31 +371,28 @@ function mkNoise(t,dur,vol,filterFreq){
   src.start(t); src.stop(t+dur+0.05);
 }
 
-// ── UPBEAT LATIN CASINO GROOVE ────────────────────────────────────────────
-// 126 BPM — brass stabs, Latin percussion, maracas, clave, walking bass
-// Think Ricky Martin meets Vegas floor — energetic, fun, keeps you spinning
-var BPM=126, BEAT=60/BPM, BAR=BEAT*4;
+// ── EDM CLUB DROP ──────────────────────────────────────────────────────────
+// 128 BPM — four-on-the-floor kick, pumping bass, euphoric synth lead
+// Daft Punk energy meets casino floor
+var BPM=128, BEAT=60/BPM, BAR=BEAT*4;
 
-// 4-bar Latin loop: Am / Dm / E7 / Am  (classic Latin II-V-I feel)
-var BASS_WALK = [
-  [220,196,220,246.9],     // Am: A3 G3 A3 B3
-  [146.8,164.8,174.6,196], // Dm: D3 E3 F3 G3
-  [164.8,185,196,220],     // E7: E3 F#3 G3 A3
-  [220,246.9,261.6,220],   // Am: A3 B3 C4 A3
+// 8-bar loop: 4 bars build → 4 bars full drop
+// Key: F minor — dark and energetic
+// Chord progression: Fm / Db / Ab / Eb (repeat)
+var DROP_BASS = [174.6, 138.6, 207.7, 155.6]; // F2, Db2, Ab2, Eb2
+var LEAD_NOTES = [
+  // Bar 1-2: melodic hook (8th notes)
+  [349.2,415.3,523.3,466.2,415.3,349.2,311.1,349.2],
+  [277.2,311.1,349.2,415.3,349.2,311.1,277.2,233.1],
+  [415.3,466.2,523.3,622.3,523.3,466.2,415.3,349.2],
+  [311.1,349.2,415.3,466.2,415.3,349.2,311.1,277.2],
 ];
-// Brass stab chords — punchy off-beat hits
-var BRASS_CHORDS=[
-  [440,523.3,659.3],   // Am: A4 C5 E5
-  [293.7,349.2,440],   // Dm: D4 F4 A4
-  [329.6,415.3,493.9], // E7: E4 G#4 B4
-  [440,523.3,659.3],   // Am: A4 C5 E5
-];
-// Trumpet lead melody — bright and punchy
-var TRUMPET_MEL=[
-  [880,784,880,1047,880,784,698,784],
-  [698,659,698,784,698,659,587,659],
-  [659,740,659,784,659,587,523,587],
-  [880,784,698,659,698,784,880,784],
+// Supersaw chord stab frequencies
+var STAB_CHORDS = [
+  [349.2,415.3,523.3,622.3],  // Fm
+  [277.2,349.2,415.3,523.3],  // Db
+  [207.7,261.6,311.1,392.0],  // Ab
+  [155.6,196.0,233.1,311.1],  // Eb
 ];
 
 function startMusic(){
@@ -410,168 +407,177 @@ function scheduleMusic(startAt){
 
   for(var ci=0;ci<4;ci++){
     var t=startAt+ci*BAR;
-    var bassWalk=BASS_WALK[ci];
-    var brassChord=BRASS_CHORDS[ci];
-    var trumpMel=TRUMPET_MEL[ci];
+    var bassRoot=DROP_BASS[ci];
+    var leadSeq=LEAD_NOTES[ci];
+    var stabChord=STAB_CHORDS[ci];
 
-    // ── Clave pattern — the rhythmic heartbeat of Latin music ──
-    // Son clave: 3-2 pattern  (1 . . 1 . 1 . . | 1 . 1 . . . . .)
-    var claveBeats=[0, 0.375, 0.75, 1.25, 1.625,  2.0, 2.5];
-    claveBeats.forEach(function(b){
+    // ── Four-on-the-floor kick — punchy and hard ──
+    for(var kb=0;kb<4;kb++){
+      (function(b){
+        var tk=t+b*BEAT;
+        // Sub thump
+        var ko=audioCtx.createOscillator(),kg=audioCtx.createGain();
+        ko.type='sine';
+        ko.frequency.setValueAtTime(180,tk);
+        ko.frequency.exponentialRampToValueAtTime(38,tk+0.08);
+        kg.gain.setValueAtTime(0,tk); kg.gain.linearRampToValueAtTime(1.0,tk+0.004);
+        kg.gain.exponentialRampToValueAtTime(0.0001,tk+0.20);
+        ko.connect(kg); kg.connect(musicGain); ko.start(tk); ko.stop(tk+0.22);
+        musicNodes.push(ko);
+        // Kick click
+        var ksz=Math.floor(audioCtx.sampleRate*0.022);
+        var kbuf=audioCtx.createBuffer(1,ksz,audioCtx.sampleRate);
+        var kd=kbuf.getChannelData(0);
+        for(var k=0;k<ksz;k++) kd[k]=(Math.random()*2-1)*(1-k/ksz);
+        var ksrc=audioCtx.createBufferSource(); ksrc.buffer=kbuf;
+        var kf=audioCtx.createBiquadFilter(); kf.type='lowpass'; kf.frequency.value=3500;
+        var kgain=audioCtx.createGain(); kgain.gain.value=0.45;
+        ksrc.connect(kf); kf.connect(kgain); kgain.connect(musicGain);
+        ksrc.start(tk); ksrc.stop(tk+0.025);
+        musicNodes.push(ksrc);
+      })(kb);
+    }
+
+    // ── Clap on beats 2 and 4 ──
+    [1,3].forEach(function(b){
       var tc=t+b*BEAT;
-      var co=audioCtx.createOscillator(), cg=audioCtx.createGain();
-      co.type='sine'; co.frequency.value=1200;
-      cg.gain.setValueAtTime(0,tc); cg.gain.linearRampToValueAtTime(0.5,tc+0.005);
-      cg.gain.exponentialRampToValueAtTime(0.0001,tc+0.055);
-      co.connect(cg); cg.connect(musicGain); co.start(tc); co.stop(tc+0.06);
-      musicNodes.push(co);
-    });
-
-    // ── Maracas — continuous 16th note shaker ──
-    for(var mb=0;mb<16;mb++){
-      (function(b){
-        var tm2=t+b*(BEAT/4);
-        var accent=b%4===0?0.28:b%2===0?0.16:0.09;
-        var msz=Math.floor(audioCtx.sampleRate*0.03);
-        var mbuf=audioCtx.createBuffer(1,msz,audioCtx.sampleRate);
-        var md=mbuf.getChannelData(0);
-        for(var k=0;k<msz;k++) md[k]=(Math.random()*2-1)*(1-k/msz)*0.7;
-        var msrc=audioCtx.createBufferSource(); msrc.buffer=mbuf;
-        var mhp=audioCtx.createBiquadFilter(); mhp.type='highpass'; mhp.frequency.value=5000;
-        var mg2=audioCtx.createGain(); mg2.gain.value=accent;
-        msrc.connect(mhp); mhp.connect(mg2); mg2.connect(musicGain);
-        msrc.start(tm2); msrc.stop(tm2+0.032);
-        musicNodes.push(msrc);
-      })(mb);
-    }
-
-    // ── Bongo/conga pattern — alternating high/low ──
-    // Low conga on beats, high bongo on off-beats
-    for(var bb=0;bb<8;bb++){
-      (function(b){
-        var tb2=t+b*(BEAT/2);
-        var isLow=(b%2===0);
-        var freq=isLow?180:320;
-        var vol=isLow?0.65:0.45;
-        var bo=audioCtx.createOscillator(), bg=audioCtx.createGain();
-        bo.type='sine';
-        bo.frequency.setValueAtTime(freq,tb2);
-        bo.frequency.exponentialRampToValueAtTime(freq*0.5,tb2+0.06);
-        bg.gain.setValueAtTime(0,tb2); bg.gain.linearRampToValueAtTime(vol,tb2+0.004);
-        bg.gain.exponentialRampToValueAtTime(0.0001,tb2+0.12);
-        bo.connect(bg); bg.connect(musicGain); bo.start(tb2); bo.stop(tb2+0.14);
-        musicNodes.push(bo);
-        // Body resonance noise
-        var bsz=Math.floor(audioCtx.sampleRate*0.05);
-        var bbuf=audioCtx.createBuffer(1,bsz,audioCtx.sampleRate);
-        var bd=bbuf.getChannelData(0);
-        for(var k=0;k<bsz;k++) bd[k]=(Math.random()*2-1)*(1-k/bsz);
-        var bsrc=audioCtx.createBufferSource(); bsrc.buffer=bbuf;
-        var bflt=audioCtx.createBiquadFilter(); bflt.type='bandpass';
-        bflt.frequency.value=isLow?400:800; bflt.Q.value=2;
-        var bgn=audioCtx.createGain(); bgn.gain.value=0.2;
-        bsrc.connect(bflt); bflt.connect(bgn); bgn.connect(musicGain);
-        bsrc.start(tb2); bsrc.stop(tb2+0.055);
-        musicNodes.push(bsrc);
-      })(bb);
-    }
-
-    // ── Walking bass — 4 quarter notes per bar, smooth and bouncy ──
-    bassWalk.forEach(function(freq,b){
-      var tbs=t+b*BEAT;
-      var bao=audioCtx.createOscillator(), bag=audioCtx.createGain();
-      bao.type='triangle'; bao.frequency.value=freq;
-      bag.gain.setValueAtTime(0,tbs); bag.gain.linearRampToValueAtTime(0.75,tbs+0.02);
-      bag.gain.setValueAtTime(0.75,tbs+BEAT*0.7); bag.gain.exponentialRampToValueAtTime(0.0001,tbs+BEAT*0.92);
-      bao.connect(bag); bag.connect(musicGain); bao.start(tbs); bao.stop(tbs+BEAT);
-      musicNodes.push(bao);
-      // Pluck attack on bass
-      var bao2=audioCtx.createOscillator(), bag2=audioCtx.createGain();
-      bao2.type='sawtooth'; bao2.frequency.value=freq*2;
-      var blp=audioCtx.createBiquadFilter(); blp.type='lowpass'; blp.frequency.value=600; blp.Q.value=2;
-      bag2.gain.setValueAtTime(0,tbs); bag2.gain.linearRampToValueAtTime(0.3,tbs+0.008);
-      bag2.gain.exponentialRampToValueAtTime(0.0001,tbs+0.12);
-      bao2.connect(blp); blp.connect(bag2); bag2.connect(musicGain);
-      bao2.start(tbs); bao2.stop(tbs+0.13);
-      musicNodes.push(bao2);
-    });
-
-    // ── Brass stabs — syncopated off-beat punches ──
-    // Latin feel: stabs on the AND of 2 and AND of 4
-    [0.5, 1.5, 2.5, 3.0, 3.5].forEach(function(b){
-      var tst=t+b*BEAT;
-      brassChord.forEach(function(f){
-        var so=audioCtx.createOscillator(), sg=audioCtx.createGain();
-        so.type='sawtooth'; so.frequency.value=f;
-        var slp=audioCtx.createBiquadFilter(); slp.type='lowpass';
-        slp.frequency.setValueAtTime(2200,tst); slp.frequency.exponentialRampToValueAtTime(800,tst+0.08);
-        slp.Q.value=3;
-        sg.gain.setValueAtTime(0,tst); sg.gain.linearRampToValueAtTime(0.22,tst+0.01);
-        sg.gain.exponentialRampToValueAtTime(0.0001,tst+0.14);
-        so.connect(slp); slp.connect(sg); sg.connect(musicGain);
-        so.start(tst); so.stop(tst+0.16);
-        musicNodes.push(so);
+      // Two-layer clap for thickness
+      [0, 0.008].forEach(function(offset){
+        var csz=Math.floor(audioCtx.sampleRate*0.07);
+        var cbuf=audioCtx.createBuffer(1,csz,audioCtx.sampleRate);
+        var cd=cbuf.getChannelData(0);
+        for(var k=0;k<csz;k++) cd[k]=(Math.random()*2-1)*(1-k/csz);
+        var csrc=audioCtx.createBufferSource(); csrc.buffer=cbuf;
+        var cf=audioCtx.createBiquadFilter(); cf.type='bandpass';
+        cf.frequency.value=1200; cf.Q.value=0.9;
+        var cg=audioCtx.createGain(); cg.gain.value=0.55;
+        csrc.connect(cf); cf.connect(cg); cg.connect(musicGain);
+        csrc.start(tc+offset); csrc.stop(tc+offset+0.08);
+        musicNodes.push(csrc);
       });
     });
 
-    // ── Trumpet lead melody — bright, punchy, playful ──
-    trumpMel.forEach(function(freq,step){
-      var tt=t+step*(BEAT/2);
-      // Main trumpet tone — sawtooth through bright filter
-      var to=audioCtx.createOscillator(), tg=audioCtx.createGain();
-      to.type='sawtooth'; to.frequency.value=freq;
-      var tlp=audioCtx.createBiquadFilter(); tlp.type='lowpass';
-      tlp.frequency.setValueAtTime(3000,tt); tlp.frequency.exponentialRampToValueAtTime(1800,tt+0.06);
-      tlp.Q.value=4;
-      tg.gain.setValueAtTime(0,tt); tg.gain.linearRampToValueAtTime(0.2,tt+0.012);
-      tg.gain.setValueAtTime(0.2,tt+BEAT*0.3); tg.gain.exponentialRampToValueAtTime(0.0001,tt+BEAT*0.45);
-      to.connect(tlp); tlp.connect(tg); tg.connect(musicGain);
-      to.start(tt); to.stop(tt+BEAT*0.48);
-      musicNodes.push(to);
-      // Vibrato layer — subtle wobble
-      var tv=audioCtx.createOscillator(), tvg=audioCtx.createGain();
-      tv.type='sine'; tv.frequency.value=freq*1.003;
-      tvg.gain.setValueAtTime(0,tt); tvg.gain.linearRampToValueAtTime(0.07,tt+0.015);
-      tvg.gain.exponentialRampToValueAtTime(0.0001,tt+BEAT*0.4);
-      tv.connect(tvg); tvg.connect(musicGain); tv.start(tt); tv.stop(tt+BEAT*0.42);
-      musicNodes.push(tv);
+    // ── Open hi-hat every 8th, closed on 16ths ──
+    for(var hb=0;hb<16;hb++){
+      (function(b){
+        var th=t+b*(BEAT/4);
+        var isOpen=(b%2!==0); // open on off-16ths
+        var vol=isOpen?0.13:b%4===0?0.18:0.09;
+        var dur=isOpen?0.055:0.022;
+        var hsz=Math.floor(audioCtx.sampleRate*dur);
+        var hbuf=audioCtx.createBuffer(1,hsz,audioCtx.sampleRate);
+        var hd=hbuf.getChannelData(0);
+        for(var k=0;k<hsz;k++) hd[k]=(Math.random()*2-1)*(1-k/hsz);
+        var hsrc=audioCtx.createBufferSource(); hsrc.buffer=hbuf;
+        var hpf=audioCtx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=isOpen?7000:9000;
+        var hg=audioCtx.createGain(); hg.gain.value=vol;
+        hsrc.connect(hpf); hpf.connect(hg); hg.connect(musicGain);
+        hsrc.start(th); hsrc.stop(th+dur+0.005);
+        musicNodes.push(hsrc);
+      })(hb);
+    }
+
+    // ── Pumping sidechain bass — EDM signature ──
+    // Bass ducks on each kick then swells back up
+    for(var bb=0;bb<4;bb++){
+      (function(b){
+        var tb=t+b*BEAT;
+        // Main bass note
+        var bao=audioCtx.createOscillator(), bag=audioCtx.createGain();
+        bao.type='sawtooth'; bao.frequency.value=bassRoot;
+        var blp=audioCtx.createBiquadFilter(); blp.type='lowpass';
+        blp.frequency.setValueAtTime(200,tb);      // ducked on kick
+        blp.frequency.linearRampToValueAtTime(1800,tb+BEAT*0.15); // swell open
+        blp.frequency.setValueAtTime(1800,tb+BEAT*0.85);
+        blp.frequency.linearRampToValueAtTime(200,tb+BEAT*0.98); // close before next kick
+        blp.Q.value=2;
+        // Gain sidechain simulation
+        bag.gain.setValueAtTime(0,tb); bag.gain.linearRampToValueAtTime(0.0001,tb+0.01);
+        bag.gain.linearRampToValueAtTime(0.75,tb+BEAT*0.12);
+        bag.gain.setValueAtTime(0.75,tb+BEAT*0.88);
+        bag.gain.linearRampToValueAtTime(0,tb+BEAT);
+        bao.connect(blp); blp.connect(bag); bag.connect(musicGain);
+        bao.start(tb); bao.stop(tb+BEAT+0.02);
+        musicNodes.push(bao);
+        // Sub octave sine
+        var sub=audioCtx.createOscillator(), subg=audioCtx.createGain();
+        sub.type='sine'; sub.frequency.value=bassRoot*0.5;
+        subg.gain.setValueAtTime(0,tb+0.01); subg.gain.linearRampToValueAtTime(0.5,tb+BEAT*0.12);
+        subg.gain.setValueAtTime(0.5,tb+BEAT*0.88); subg.gain.linearRampToValueAtTime(0,tb+BEAT);
+        sub.connect(subg); subg.connect(musicGain); sub.start(tb); sub.stop(tb+BEAT+0.02);
+        musicNodes.push(sub);
+      })(bb);
+    }
+
+    // ── Supersaw lead synth — the euphoric hook ──
+    leadSeq.forEach(function(freq,step){
+      var tl=t+step*(BEAT/2);
+      // 3 detuned saws = supersaw
+      [-4,0,4].forEach(function(detuneCents){
+        var detune=Math.pow(2,detuneCents/1200);
+        var lo=audioCtx.createOscillator(), lg=audioCtx.createGain();
+        lo.type='sawtooth'; lo.frequency.value=freq*detune;
+        var llp=audioCtx.createBiquadFilter(); llp.type='lowpass';
+        llp.frequency.setValueAtTime(4000,tl);
+        llp.frequency.exponentialRampToValueAtTime(1600,tl+BEAT*0.3);
+        llp.Q.value=3;
+        lg.gain.setValueAtTime(0,tl); lg.gain.linearRampToValueAtTime(0.12,tl+0.01);
+        lg.gain.setValueAtTime(0.12,tl+BEAT*0.35); lg.gain.exponentialRampToValueAtTime(0.0001,tl+BEAT*0.48);
+        lo.connect(llp); llp.connect(lg); lg.connect(musicGain);
+        lo.start(tl); lo.stop(tl+BEAT*0.5);
+        musicNodes.push(lo);
+      });
     });
 
-    // ── Guiro scrape accent every 2 beats ──
-    [0,2].forEach(function(b){
-      var tg2=t+b*BEAT+BEAT*0.75;
-      var gsz=Math.floor(audioCtx.sampleRate*0.18);
-      var gbuf=audioCtx.createBuffer(1,gsz,audioCtx.sampleRate);
-      var gd=gbuf.getChannelData(0);
-      // Periodic noise for scrape texture
-      for(var k=0;k<gsz;k++){
-        gd[k]=(Math.random()*2-1)*0.6*Math.sin(k*0.3)*(1-k/gsz);
-      }
-      var gsrc=audioCtx.createBufferSource(); gsrc.buffer=gbuf;
-      var gbp=audioCtx.createBiquadFilter(); gbp.type='bandpass'; gbp.frequency.value=1800; gbp.Q.value=1;
-      var gg=audioCtx.createGain(); gg.gain.value=0.18;
-      gsrc.connect(gbp); gbp.connect(gg); gg.connect(musicGain);
-      gsrc.start(tg2); gsrc.stop(tg2+0.19);
-      musicNodes.push(gsrc);
+    // ── Chord stabs on off-beats — the energy punches ──
+    [0.5,1.5,2.5,3.5].forEach(function(b){
+      var ts=t+b*BEAT;
+      stabChord.forEach(function(f){
+        [-2,0,2].forEach(function(dc){
+          var detune=Math.pow(2,dc/1200);
+          var so=audioCtx.createOscillator(), sg=audioCtx.createGain();
+          so.type='sawtooth'; so.frequency.value=f*detune;
+          var slp=audioCtx.createBiquadFilter(); slp.type='lowpass';
+          slp.frequency.setValueAtTime(3000,ts); slp.frequency.exponentialRampToValueAtTime(900,ts+0.12);
+          slp.Q.value=4;
+          sg.gain.setValueAtTime(0,ts); sg.gain.linearRampToValueAtTime(0.07,ts+0.008);
+          sg.gain.exponentialRampToValueAtTime(0.0001,ts+0.16);
+          so.connect(slp); slp.connect(sg); sg.connect(musicGain);
+          so.start(ts); so.stop(ts+0.18);
+          musicNodes.push(so);
+        });
+      });
     });
 
-    // ── Cowbell accent on beat 3 ──
-    (function(){
-      var tc2=t+2*BEAT;
-      var co2=audioCtx.createOscillator(), cg2=audioCtx.createGain();
-      co2.type='square'; co2.frequency.value=562;
-      cg2.gain.setValueAtTime(0,tc2); cg2.gain.linearRampToValueAtTime(0.18,tc2+0.004);
-      cg2.gain.exponentialRampToValueAtTime(0.0001,tc2+0.22);
-      co2.connect(cg2); cg2.connect(musicGain); co2.start(tc2); co2.stop(tc2+0.24);
-      musicNodes.push(co2);
-      // Cowbell ring
-      var co3=audioCtx.createOscillator(), cg3=audioCtx.createGain();
-      co3.type='square'; co3.frequency.value=845;
-      cg3.gain.setValueAtTime(0,tc2); cg3.gain.linearRampToValueAtTime(0.09,tc2+0.004);
-      cg3.gain.exponentialRampToValueAtTime(0.0001,tc2+0.18);
-      co3.connect(cg3); cg3.connect(musicGain); co3.start(tc2); co3.stop(tc2+0.2);
-      musicNodes.push(co3);
-    })();
+    // ── Riser/sweeper texture — builds tension across bar ──
+    if(ci===3){
+      var riser=audioCtx.createOscillator(), rg=audioCtx.createGain();
+      riser.type='sawtooth';
+      riser.frequency.setValueAtTime(200,t); riser.frequency.exponentialRampToValueAtTime(1600,t+BAR);
+      var rlp=audioCtx.createBiquadFilter(); rlp.type='lowpass';
+      rlp.frequency.setValueAtTime(400,t); rlp.frequency.linearRampToValueAtTime(3000,t+BAR);
+      rlp.Q.value=2;
+      rg.gain.setValueAtTime(0,t); rg.gain.linearRampToValueAtTime(0.08,t+BAR*0.5);
+      rg.gain.linearRampToValueAtTime(0.18,t+BAR-0.1); rg.gain.linearRampToValueAtTime(0,t+BAR);
+      riser.connect(rlp); rlp.connect(rg); rg.connect(musicGain);
+      riser.start(t); riser.stop(t+BAR+0.05);
+      musicNodes.push(riser);
+    }
+
+    // ── Arpeggio sparkle on top — glittery 16th notes ──
+    var arp=[bassRoot*4, bassRoot*5, bassRoot*6, bassRoot*8,
+             bassRoot*6, bassRoot*5, bassRoot*4, bassRoot*3];
+    for(var ai=0;ai<8;ai++){
+      (function(i){
+        var ta=t+i*(BEAT/2)+BEAT*0.25; // offset to fill gaps in lead
+        var ao=audioCtx.createOscillator(), ag=audioCtx.createGain();
+        ao.type='sine'; ao.frequency.value=arp[i];
+        ag.gain.setValueAtTime(0,ta); ag.gain.linearRampToValueAtTime(0.06,ta+0.008);
+        ag.gain.exponentialRampToValueAtTime(0.0001,ta+BEAT*0.22);
+        ao.connect(ag); ag.connect(musicGain); ao.start(ta); ao.stop(ta+BEAT*0.24);
+        musicNodes.push(ao);
+      })(ai);
+    }
   }
 
   setTimeout(function(){ if(musicPlaying) scheduleMusic(startAt+loopLen); },(loopLen-0.12)*1000);
@@ -1015,23 +1021,27 @@ var SYM=[
 ];
 // Weights: molly=rare, trump=uncommon, boston=very rare, geoff/emily/kalynn/brady/ball=common
 // More symbols = less frequent wins
-var WT=[2,1,1,7,8,9,10,5], WS=0; // ball weight reduced 12->5, trump reduced 3->1
+var WT=[2,1,1,7,8,9,10,3], WS=0; // ball=3, trump=1 for balanced RTP
 for(var _i=0;_i<WT.length;_i++) WS+=WT[_i];
 function rndSym(){ var r=Math.random()*WS,s=0; for(var i=0;i<SYM.length;i++){s+=WT[i];if(r<s)return i;} return SYM.length-1; }
 
 // Generate a full reel column guaranteeing max 1 Molly, max 1 Boston per reel
 function rndCol(allowMolly){
   var col=[];
-  var mollyPlaced=false;
-  var bostonPlaced=false;
+  var used={};   // track all symbols placed on this reel — no duplicates
   for(var rw=0;rw<3;rw++){
     var s=rndSym();
-    // Max 1 Molly per reel
-    while(s===0 && (!allowMolly || mollyPlaced)) s=rndSym();
-    // Max 1 Boston per reel
-    while(s===2 && bostonPlaced) s=rndSym();
-    if(s===0) mollyPlaced=true;
-    if(s===2) bostonPlaced=true;
+    var attempts=0;
+    // Reroll if: duplicate symbol, OR Molly not allowed, OR Trump wild duplicated
+    while(attempts<40 && (
+      used[s]===true ||
+      (s===0 && !allowMolly)
+    )){
+      s=rndSym();
+      attempts++;
+    }
+    // Safety fallback: if we somehow can't find a unique symbol, just use what we have
+    used[s]=true;
     col.push(s);
   }
   return col;
