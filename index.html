@@ -37,32 +37,52 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 
 /* Win breakdown tooltip */
 #winBreakdown{
-  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  background:linear-gradient(160deg,rgba(18,10,28,.97),rgba(8,4,14,.98));
-  border:1px solid rgba(200,168,76,.4);border-radius:12px;
-  padding:12px 20px;z-index:180;pointer-events:none;
-  opacity:0;transition:opacity 0.3s ease;min-width:260px;text-align:center;
-  box-shadow:0 0 0 1px rgba(100,60,10,.5),0 8px 30px rgba(0,0,0,.7);
+  position:fixed;
+  bottom:0;left:50%;transform:translateX(-50%);
+  background:linear-gradient(160deg,rgba(18,10,28,.98),rgba(8,4,14,.99));
+  border:1px solid rgba(200,168,76,.5);
+  border-bottom:none;
+  border-radius:20px 20px 0 0;
+  padding:20px 32px 24px;
+  z-index:180;pointer-events:none;
+  width:min(680px,92vw);
+  text-align:center;
+  box-shadow:0 0 0 1px rgba(100,60,10,.6),0 -8px 40px rgba(0,0,0,.6),0 0 60px rgba(200,168,76,.08);
+  opacity:0;
+  transform:translateX(-50%) translateY(20px);
+  transition:opacity 0.35s ease, transform 0.35s cubic-bezier(0.22,1,0.36,1);
 }
-#winBreakdown.show{opacity:1}
+#winBreakdown.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
 #winBreakdown .wb-title{
-  font-family:'Cinzel',serif;font-size:9px;color:#7a6030;
-  letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px;
+  font-family:'Cinzel',serif;font-size:11px;color:#9a7a3a;
+  letter-spacing:3px;text-transform:uppercase;display:block;margin-bottom:14px;
+}
+#winBreakdown .wb-lines-grid{
+  display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;
 }
 #winBreakdown .wb-line{
-  font-family:'Playfair Display',serif;font-size:13px;color:#c9a84c;
-  display:flex;justify-content:space-between;gap:20px;
-  padding:3px 0;border-bottom:1px solid rgba(200,168,76,.1);
+  font-family:'Cinzel',serif;font-size:13px;color:#c9a84c;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(200,168,76,.15);
+  border-radius:8px;
+  padding:8px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  min-width:120px;
 }
-#winBreakdown .wb-line:last-child{border-bottom:none}
-#winBreakdown .wb-line .wb-sym{color:#FFD700;font-weight:700}
-#winBreakdown .wb-line .wb-pay{color:#4ade80;font-weight:700}
+#winBreakdown .wb-sym{color:#FFD700;font-weight:700;font-size:14px;display:block}
+#winBreakdown .wb-row-label{color:#7a6030;font-size:10px;letter-spacing:1px}
+#winBreakdown .wb-pay{color:#4ade80;font-weight:700;font-size:16px;display:block}
 #winBreakdown .wb-total{
-  font-family:'Cinzel',serif;font-size:11px;color:#FFD700;
-  display:flex;justify-content:space-between;gap:20px;
-  margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,215,0,.2);
+  font-family:'Cinzel Decorative',serif;font-size:18px;color:#FFD700;
+  display:flex;justify-content:center;align-items:center;gap:16px;
+  padding-top:14px;border-top:1px solid rgba(255,215,0,.25);
   letter-spacing:1px;
 }
+#winBreakdown .wb-total-label{font-size:12px;color:#9a7a3a;font-family:'Cinzel',serif;letter-spacing:2px}
+#winBreakdown .wb-total-amount{font-size:28px;color:#FFD700;font-weight:700}
 
 /* REELS */
 .reels-wrap{background:linear-gradient(180deg,rgba(0,0,0,.83),rgba(5,0,10,.93));border-radius:14px;padding:10px 8px 8px;margin-bottom:12px;border:1px solid rgba(200,168,76,.16);box-shadow:inset 0 0 50px rgba(0,0,0,.85),0 0 0 1px rgba(100,60,10,.35);position:relative}
@@ -158,7 +178,9 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .mbtn:hover{box-shadow:0 0 25px rgba(150,50,255,.5);transform:translateY(-1px)}
 
 /* WIN VISUALS */
-.particles{position:fixed;inset:0;pointer-events:none;z-index:155;overflow:hidden}
+.particles{position:fixed;inset:0;pointer-events:none;z-index:155;overflow:hidden;will-change:transform}
+.pk{position:absolute;pointer-events:none;z-index:156}
+@keyframes pkfall{from{opacity:1;transform:translateY(-10px) rotate(0deg) scale(1)}to{opacity:0;transform:translateY(110vh) rotate(900deg) scale(0.3)}}
 #flashEl{position:fixed;inset:0;z-index:150;pointer-events:none;opacity:0;background:radial-gradient(circle at center,rgba(255,215,0,.45) 0%,rgba(200,100,0,.2) 50%,transparent 75%)}
 #winTextWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:160;pointer-events:none;opacity:0}
 #winTextInner{font-family:'Cinzel Decorative',serif;font-size:clamp(36px,8vw,90px);font-weight:900;text-align:center;line-height:1.1;text-shadow:0 0 40px rgba(255,215,0,.9),0 0 80px rgba(255,150,0,.6),4px 4px 0 rgba(0,0,0,.5);letter-spacing:4px;transform:scale(0.3);padding:24px 50px 20px;background:rgba(0,0,0,.6);border-radius:20px;border:2px solid rgba(255,215,0,.4);backdrop-filter:blur(6px)}
@@ -259,8 +281,8 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 <div id="winTextWrap"><div id="winTextInner"></div></div>
 <div id="winBreakdown">
   <span class="wb-title">Win Breakdown</span>
-  <div id="wbLines"></div>
-  <div class="wb-total"><span>TOTAL WIN</span><span id="wbTotal"></span></div>
+  <div class="wb-lines-grid" id="wbLines"></div>
+  <div class="wb-total" id="wbTotal"></div>
 </div>
 <button id="muteBtn">🔊</button>
 
@@ -713,10 +735,7 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
     // Screen flash intensity increases
     flashScreen(0.1+(mollysThisSpin*0.12), 200+(mollysThisSpin*80));
 
-  } else if(!hasMolly && reelIdx===2 && mollysThisSpin===0){
-    // Reel 3 lands, still no Molly — bonus officially impossible
-    playDeflate();
-    setMsg('No bonus this spin…','');
+  
   }
 }
 
@@ -906,32 +925,35 @@ function createParticle(x,y,opts){
   opts=opts||{};
   var colors=['#FFD700','#FFF8E0','#FF6B6B','#c8a84c','#ffffff','#ffe066','#ff9500'];
   var color=opts.color||colors[Math.floor(Math.random()*colors.length)];
-  var shape=opts.shape||['coin','star','diamond','spark'][Math.floor(Math.random()*4)];
+  var shape=opts.shape||['coin','star','diamond'][Math.floor(Math.random()*3)];
   var size=opts.size||(8+Math.random()*14);
-  var vx=(Math.random()-0.5)*(opts.spread||12);
-  var vy=-(8+Math.random()*(opts.upForce||16));
-  var grav=opts.gravity||0.45;
-  var life=opts.life||(1200+Math.random()*800);
-  var rot=Math.random()*360, rotSpd=(Math.random()-0.5)*12;
+  var life=((opts.life||1400)+Math.random()*400)/1000;
+
   var el=document.createElement('div');
-  var css='position:absolute;left:'+x+'px;top:'+y+'px;width:'+size+'px;height:'+size+'px;pointer-events:none;z-index:155;';
-  if(shape==='coin') css+='border-radius:50%;background:radial-gradient(circle at 35% 35%,'+color+',#8a6010);border:1px solid rgba(255,255,255,.3);box-shadow:0 0 4px rgba(255,215,0,.6)';
-  else if(shape==='star') css+='background:'+color+';clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)';
-  else if(shape==='diamond') css+='background:linear-gradient(135deg,'+color+',rgba(255,255,255,.8));border-radius:2px';
-  else css+='background:'+color+';border-radius:2px;width:'+(size*0.3)+'px';
+  el.className='pk';
+
+  // Random horizontal drift baked into animation via transform
+  var driftX=(Math.random()-0.5)*(opts.spread||12)*8;
+  var upBoost=opts.upForce||14;
+
+  var css='left:'+x+'px;top:'+y+'px;width:'+size+'px;height:'+size+'px;';
+  css+='animation:pkfall '+life+'s ease-out forwards;';
+  // Horizontal drift via inline animation override isn't easy — use margin trick
+  css+='margin-left:'+driftX+'px;';
+
+  if(shape==='coin'){
+    css+='border-radius:50%;background:radial-gradient(circle at 35% 35%,'+color+',#8a6010);';
+    css+='border:1px solid rgba(255,255,255,.3);box-shadow:0 0 6px rgba(255,215,0,.6);';
+  } else if(shape==='star'){
+    css+='background:'+color+';';
+    css+='clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);';
+  } else {
+    css+='background:linear-gradient(135deg,'+color+',rgba(255,255,255,.7));border-radius:2px;';
+    css+='transform:rotate(45deg);';
+  }
   el.style.cssText=css;
   particleContainer.appendChild(el);
-  var start=performance.now();
-  function animate(now){
-    var e=now-start;
-    if(e>=life){ if(el.parentNode) el.parentNode.removeChild(el); return; }
-    vy+=grav; vx*=0.99; x+=vx; y+=vy; rot+=rotSpd;
-    var alpha=e<life*0.7?1:1-(e-life*0.7)/(life*0.3);
-    el.style.left=x+'px'; el.style.top=y+'px'; el.style.opacity=alpha;
-    el.style.transform='rotate('+(shape==='diamond'?45+rot:rot)+'deg)';
-    requestAnimationFrame(animate);
-  }
-  requestAnimationFrame(animate);
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, life*1000+200);
 }
 
 function burst(count,opts){
@@ -943,7 +965,12 @@ function burst(count,opts){
 
 function rain(count,opts,dur){
   for(var i=0;i<count;i++){
-    (function(i){ setTimeout(function(){ createParticle(Math.random()*window.innerWidth,-10,Object.assign({},opts,{upForce:0,gravity:opts.gravity||0.55,spread:2})); },Math.random()*(dur||1000)); })(i);
+    (function(i){ setTimeout(function(){
+      var o={shape:(opts&&opts.shape)||'coin',size:(opts&&opts.size)||10,
+             color:(opts&&opts.color)||null,life:(opts&&opts.life)||1800,
+             upForce:0,gravity:(opts&&opts.gravity)||0.55,spread:2};
+      createParticle(Math.random()*window.innerWidth,-10,o);
+    },Math.random()*(dur||1000)); })(i);
   }
 }
 
@@ -1305,23 +1332,17 @@ function onDone(res,wasFree){
 
   // Scatter / sticky respin logic (not during free spins)
   if(!wasFree){
-    if(scatterCount===3){
-      // Exactly 3 Mollys on initial roll — lock them, give 2 bonus spins on remaining reels
-      var nonMollyReels=[];
-      for(var nm=0;nm<5;nm++){ if(mollyReels.indexOf(nm)<0) nonMollyReels.push(nm); }
-      setTimeout(function(){ doStickyRespin(res,3,mollyReels,nonMollyReels,2); },700);
-      document.getElementById('spinBtn').disabled=true;
-      return;
-    } else if(scatterCount>=4){
-      // 4 or 5 Mollys on initial spin — straight to bonus modal
+    if(scatterCount>=3){
+      // 3+ Mollys on one spin — straight to bonus modal
       playScatterTrigger();
       showWinText('\ud83d\udc3e '+scatterCount+' MOLLYS! \ud83d\udc3e','#FFD700',1800);
       flashScreen(0.65, 500);
+      burst(35,{shape:'star',size:11,upForce:20,spread:20,life:1800,gravity:0.34});
       setTimeout(function(){ showFSModal(scatterCount); },500);
       document.getElementById('spinBtn').disabled=false;
       return;
     }
-    // 0, 1, or 2 Mollys — no bonus, no sticky
+    // 0, 1, or 2 Mollys — no bonus
   } else if(wasFree && scatterCount>=3){
     playScatterTrigger();
     setTimeout(function(){ showFSModal(scatterCount); },500);
@@ -1346,16 +1367,24 @@ function showWinBreakdown(lines, total){
   lines.forEach(function(l){
     var div=document.createElement('div');
     div.className='wb-line';
-    div.innerHTML='<span class="wb-sym">'+l.sym+' ×'+l.cnt+' ('+l.row+')</span>'
+    // Parse row label from sym string if present
+    var symText=l.sym;
+    var rowText=l.row||'';
+    // Boston has multiplier info in sym
+    var isMult=(rowText==='ANYWHERE');
+    div.innerHTML='<span class="wb-sym">'+symText+(l.cnt&&!isMult?' &times;'+l.cnt:'')+'</span>'
+      +(rowText&&!isMult?'<span class="wb-row-label">'+rowText+'</span>':'')
       +'<span class="wb-pay">+$'+l.pay.toFixed(2)+'</span>';
     container.appendChild(div);
   });
-  document.getElementById('wbTotal').textContent='$'+total.toFixed(2);
+  // Total
+  document.getElementById('wbTotal').innerHTML=
+    '<span class="wb-total-label">TOTAL WIN</span>'
+    +'<span class="wb-total-amount">$'+total.toFixed(2)+'</span>';
   var el=document.getElementById('winBreakdown');
   el.classList.add('show');
-  // Auto-hide after 4 seconds
+  // NO auto-hide — stays until next spin (cleared in hideWinBreakdown)
   clearTimeout(window._wbTimer);
-  window._wbTimer=setTimeout(function(){ el.classList.remove('show'); },4000);
 }
 
 function shakeMachine(big){
