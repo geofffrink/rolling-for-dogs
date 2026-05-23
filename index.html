@@ -1265,7 +1265,7 @@ function onDone(res,wasFree){
   var winningCells=[];
   var winLines=[];  // for breakdown display
 
-  var rowNames=['Top','Center','Bottom'];
+  var rowNames=['Top','Center','Bottom','Bottom-2'];
 
   for(var row=0;row<4;row++){
     for(var s=2;s<SYM.length;s++){
@@ -1344,9 +1344,12 @@ function onDone(res,wasFree){
     }
     // 0, 1, or 2 Mollys — no bonus
   } else if(wasFree && scatterCount>=3){
+    // Retrigger during free spins — show modal to add more spins
     playScatterTrigger();
+    showWinText('\ud83d\udc3e RETRIGGER! \ud83d\udc3e','#FFD700',1800);
+    flashScreen(0.6, 400);
+    document.getElementById('spinBtn').disabled=true;
     setTimeout(function(){ showFSModal(scatterCount); },500);
-    document.getElementById('spinBtn').disabled=false;
     return;
   }
 
@@ -1378,6 +1381,13 @@ function showWinBreakdown(lines, total){
     container.appendChild(div);
   });
   // Total
+  // Show multiplier in title during free spins
+  var titleEl=document.getElementById('winBreakdown').querySelector('.wb-title');
+  if(titleEl){
+    titleEl.textContent = (freeSpins>=0 && freeMult>1 && lastWinLines.length>0)
+      ? 'Free Spin Win · ×'+freeMult+' Multiplier Applied'
+      : 'Win Breakdown';
+  }
   document.getElementById('wbTotal').innerHTML=
     '<span class="wb-total-label">TOTAL WIN</span>'
     +'<span class="wb-total-amount">$'+total.toFixed(2)+'</span>';
@@ -1442,8 +1452,17 @@ function showFSModal(cnt){
 
 function startFS(s,m){
   document.getElementById('fsModal').className='overlay';
-  freeSpins=s; freeMult=m; updFS();
-  setMsg(s+' Free Spins \u00d7'+m+' Multiplier!','win');
+  var isRetrigger=(freeSpins>0);
+  if(isRetrigger){
+    // Retrigger during free spins: ADD spins, keep existing multiplier
+    freeSpins+=s;
+    // freeMult stays the same as already chosen
+    setMsg('+'+s+' Free Spins added! Total: '+freeSpins+' (\u00d7'+freeMult+')','win');
+  } else {
+    freeSpins=s; freeMult=m;
+    setMsg(s+' Free Spins \u00d7'+m+' Multiplier!','win');
+  }
+  updFS();
 
   // Big callout graphic — same overlay as win text
   showWinText('BONUS ROUND!\n'+s+' SPINS \u00d7'+m,'#FF9500',2800);
