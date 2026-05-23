@@ -807,8 +807,12 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
     reelEl.style.transition='box-shadow 0.12s ease-in';
     reelEl.style.boxShadow='0 0 0 4px #FFD700, 0 0 40px rgba(255,215,0,0.85)';
     setTimeout(function(){ reelEl.style.transition='box-shadow 1.0s ease-out'; reelEl.style.boxShadow=''; },900);
-    // MOLLY pop graphic over the reel
-    showMollyPop(reelIdx, mollysThisSpin);
+    // MOLLY pop graphic — find which row she's on
+    var mollyRow=0;
+    for(var mr=0;mr<4;mr++){
+      if(res[reelIdx][mr]===0){ mollyRow=mr; break; }
+    }
+    showMollyPop(reelIdx, mollysThisSpin, mollyRow);
 
     if(!wasFree && !stickyActive){
       // Tension messages only during normal spins
@@ -868,16 +872,23 @@ function showBostonPop(reelIdx, mult, rowIdx){
   }, 1800);
 }
 
-function showMollyPop(reelIdx, mollyCount){
-  var reelEl = document.getElementById('r'+reelIdx);
-  if(!reelEl) return;
+function showMollyPop(reelIdx, mollyCount, rowIdx){
+  var t = document.getElementById('t'+reelIdx);
+  if(!t) return;
 
-  // Remove any existing pop on this reel
-  var existing = reelEl.querySelector('.molly-pop');
-  if(existing) reelEl.removeChild(existing);
+  // Attach to the exact cell Molly is on
+  var PAD2=16;
+  var row = (rowIdx !== undefined) ? rowIdx : 1;
+  var cells = t.querySelectorAll('.cell');
+  var targetCell = cells[PAD2 + row];
+  if(!targetCell) return;
+
+  // Remove any existing pop on this cell
+  var existing = targetCell.querySelector('.molly-pop');
+  if(existing) targetCell.removeChild(existing);
 
   // Size and color escalate with each Molly
-  var sizes  = ['32px','40px','52px','62px','72px'];
+  var sizes  = ['30px','38px','48px','58px','68px'];
   var colors = ['#FFD700','#FFD700','#FF9500','#FF6B00','#FF4400'];
   var fontSize = sizes[Math.min(mollyCount-1, sizes.length-1)];
   var color    = colors[Math.min(mollyCount-1, colors.length-1)];
@@ -885,7 +896,7 @@ function showMollyPop(reelIdx, mollyCount){
   var pop = document.createElement('div');
   pop.className = 'molly-pop';
 
-  var paw  = document.createElement('span');
+  var paw = document.createElement('span');
   paw.className = 'paw';
   paw.textContent = '🐾';
   paw.style.fontSize = fontSize;
@@ -898,12 +909,10 @@ function showMollyPop(reelIdx, mollyCount){
 
   pop.appendChild(paw);
   pop.appendChild(lbl);
-  reelEl.appendChild(pop);
+  targetCell.appendChild(pop);
 
-  // Pop in animation
   pop.style.animation = 'mollyPopIn 0.4s cubic-bezier(0.175,0.885,0.32,1.6) forwards';
 
-  // Hold, then pop out
   var holdTime = mollyCount >= 3 ? 1600 : 900;
   setTimeout(function(){
     pop.style.animation = 'mollyPopOut 0.35s ease-in forwards';
