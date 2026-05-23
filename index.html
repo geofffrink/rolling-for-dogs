@@ -83,6 +83,8 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 }
 #winBreakdown .wb-total-label{font-size:12px;color:#9a7a3a;font-family:'Cinzel',serif;letter-spacing:2px}
 #winBreakdown .wb-total-amount{font-size:28px;color:#FFD700;font-weight:700}
+#wbClose{position:absolute;top:12px;right:14px;background:none;border:1px solid rgba(200,168,76,.3);border-radius:50%;width:28px;height:28px;color:#9a7a3a;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;pointer-events:all}
+#wbClose:hover{border-color:#FFD700;color:#FFD700}
 
 /* REELS */
 .reels-wrap{background:linear-gradient(180deg,rgba(0,0,0,.83),rgba(5,0,10,.93));border-radius:14px;padding:10px 8px 8px;margin-bottom:12px;border:1px solid rgba(200,168,76,.16);box-shadow:inset 0 0 50px rgba(0,0,0,.85),0 0 0 1px rgba(100,60,10,.35);position:relative}
@@ -171,11 +173,10 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .modal h2{font-family:'Cinzel Decorative',serif;font-size:28px;color:#FFD700;margin-bottom:10px;text-shadow:0 0 30px rgba(255,215,0,.6),0 0 60px rgba(255,150,0,.3)}
 .mdog{width:120px;height:120px;border-radius:50%;border:4px solid #FFD700;box-shadow:0 0 40px rgba(255,215,0,.6);display:block;margin:14px auto;object-fit:cover}
 .modal p{font-family:'Cinzel',serif;font-size:16px;color:#c9a84c;margin-bottom:22px;line-height:1.8;letter-spacing:1px}
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
 .cbtn{padding:20px 12px;font-family:'Cinzel',serif;font-size:14px;font-weight:700;background:rgba(20,10,40,.8);color:#c9a84c;border:1px solid rgba(200,168,76,.4);border-radius:12px;cursor:pointer;line-height:1.8;transition:all .15s;letter-spacing:1px}
 .cbtn:hover{background:linear-gradient(135deg,#c8a84c,#8a6010);color:#fff8e0;border-color:#FFD700;transform:translateY(-2px);box-shadow:0 0 20px rgba(200,168,76,.3)}
-.mbtn{width:100%;padding:18px;font-family:'Cinzel',serif;font-size:15px;font-weight:700;background:linear-gradient(135deg,rgba(80,0,120,.8),rgba(120,0,180,.8));color:#e0c0ff;border:1px solid rgba(180,100,255,.4);border-radius:12px;cursor:pointer;letter-spacing:2px;transition:all .15s;margin-top:4px}
-.mbtn:hover{box-shadow:0 0 25px rgba(150,50,255,.5);transform:translateY(-1px)}
+
 
 /* WIN VISUALS */
 .particles{position:fixed;inset:0;pointer-events:none;z-index:155;overflow:hidden;will-change:transform}
@@ -280,6 +281,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 </div>
 <div id="winTextWrap"><div id="winTextInner"></div></div>
 <div id="winBreakdown">
+  <button id="wbClose" onclick="hideWinBreakdown()" aria-label="Close">&times;</button>
   <span class="wb-title">Win Breakdown</span>
   <div class="wb-lines-grid" id="wbLines"></div>
   <div class="wb-total" id="wbTotal"></div>
@@ -292,7 +294,6 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
     <img class="mdog" id="mdog" src="" alt="Molly">
     <p id="scatterTxt"></p>
     <div class="cgrid" id="cgrid"></div>
-    <button class="mbtn" id="mystBtn">MYSTERY CHOICE</button>
   </div>
 </div>
 
@@ -1393,8 +1394,9 @@ function showWinBreakdown(lines, total){
     +'<span class="wb-total-amount">$'+total.toFixed(2)+'</span>';
   var el=document.getElementById('winBreakdown');
   el.classList.add('show');
-  // NO auto-hide — stays until next spin (cleared in hideWinBreakdown)
+  // Auto-hide after 4 seconds, also cleared on next spin
   clearTimeout(window._wbTimer);
+  window._wbTimer = setTimeout(function(){ hideWinBreakdown(); }, 4000);
 }
 
 function shakeMachine(big){
@@ -1444,9 +1446,6 @@ function showFSModal(cnt){
       grid.appendChild(b);
     })(opts[oi]);
   }
-  var old=document.getElementById('mystBtn'), fresh=old.cloneNode(true);
-  old.parentNode.replaceChild(fresh,old);
-  fresh.addEventListener('click',function(){ var o=opts[Math.floor(Math.random()*opts.length)]; startFS(o.s,o.m); });
   document.getElementById('fsModal').className='overlay on';
 }
 
