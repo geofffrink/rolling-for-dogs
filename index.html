@@ -116,6 +116,48 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .cell.winning img{border-color:#FFD700;box-shadow:0 0 0 3px rgba(255,215,0,.7),0 0 36px rgba(255,215,0,.85);animation:wincell .4s ease-in-out infinite alternate}
 @keyframes wincell{from{transform:scale(1)}to{transform:scale(1.07)}}
 
+/* Boston reel pop announcement */
+.boston-pop{
+  position:absolute;
+  left:50%;
+  top:40%;
+  transform:translateX(-50%) translateY(-50%) scale(0);
+  z-index:20;
+  pointer-events:none;
+  text-align:center;
+  white-space:nowrap;
+}
+.boston-pop .mult-badge{
+  font-family:'Cinzel Decorative',serif;
+  font-weight:900;
+  font-size:42px;
+  color:#00ff44;
+  text-shadow:0 0 20px rgba(0,255,68,0.9),0 0 50px rgba(0,255,68,0.6),2px 2px 0 rgba(0,0,0,0.8);
+  display:block;
+  letter-spacing:2px;
+  line-height:1;
+}
+.boston-pop .mult-label{
+  font-family:'Cinzel',serif;
+  font-size:14px;
+  color:#00ff44;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  display:block;
+  margin-top:4px;
+  text-shadow:0 0 10px rgba(0,255,68,0.8);
+}
+@keyframes bostonPopIn{
+  0%{transform:translateX(-50%) translateY(-50%) scale(0) rotate(10deg);opacity:0}
+  55%{transform:translateX(-50%) translateY(-50%) scale(1.2) rotate(-4deg);opacity:1}
+  75%{transform:translateX(-50%) translateY(-50%) scale(0.92) rotate(2deg);opacity:1}
+  100%{transform:translateX(-50%) translateY(-50%) scale(1) rotate(0deg);opacity:1}
+}
+@keyframes bostonPopOut{
+  0%{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1}
+  100%{transform:translateX(-50%) translateY(-50%) scale(0.6) translateY(-40px);opacity:0}
+}
+
 /* Molly reel pop announcement */
 .molly-pop{
   position:absolute;
@@ -781,6 +823,43 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
 }
 
 // ── Molly reel pop announcement ──────────────────────────────────────────
+function showBostonPop(reelIdx, mult){
+  var reelEl = document.getElementById('r'+reelIdx);
+  if(!reelEl) return;
+
+  var existing = reelEl.querySelector('.boston-pop');
+  if(existing) reelEl.removeChild(existing);
+
+  var pop = document.createElement('div');
+  pop.className = 'boston-pop';
+
+  var dog = document.createElement('span');
+  dog.style.cssText = 'font-size:28px;display:block;margin-bottom:4px';
+  dog.textContent = '🐕';
+
+  var badge = document.createElement('span');
+  badge.className = 'mult-badge';
+  badge.textContent = mult + 'x';
+
+  var label = document.createElement('span');
+  label.className = 'mult-label';
+  label.textContent = 'BOSTON MULT';
+
+  pop.appendChild(dog);
+  pop.appendChild(badge);
+  pop.appendChild(label);
+  reelEl.appendChild(pop);
+
+  pop.style.animation = 'bostonPopIn 0.45s cubic-bezier(0.175,0.885,0.32,1.6) forwards';
+
+  setTimeout(function(){
+    pop.style.animation = 'bostonPopOut 0.4s ease-in forwards';
+    setTimeout(function(){
+      if(pop.parentNode) pop.parentNode.removeChild(pop);
+    }, 420);
+  }, 1800);
+}
+
 function showMollyPop(reelIdx, mollyCount){
   var reelEl = document.getElementById('r'+reelIdx);
   if(!reelEl) return;
@@ -1329,6 +1408,25 @@ function spinReel(idx,finals,dur,cb){
         }, ci2*40);
       })(pi);
     }
+    // Boston on this reel? Roll and show multiplier immediately
+    var bostonOnReel=false;
+    for(var fi=0;fi<finals.length;fi++){
+      if(finals[fi]===2){ bostonOnReel=true; break; }
+    }
+    if(bostonOnReel){
+      var bMults=[2,3,5];
+      var rolledMult=bMults[Math.floor(Math.random()*bMults.length)];
+      // Store so win eval uses same value
+      window._pendingBostonMult=rolledMult;
+      showBostonPop(idx, rolledMult);
+      // Green reel glow
+      var bReelEl=document.getElementById('r'+idx);
+      if(bReelEl){
+        bReelEl.style.transition='box-shadow 0.12s ease-in';
+        bReelEl.style.boxShadow='0 0 0 4px #00ff44, 0 0 40px rgba(0,255,68,0.8)';
+        setTimeout(function(){ bReelEl.style.transition='box-shadow 1.2s ease-out'; bReelEl.style.boxShadow=''; },1800);
+      }
+    }
     playReelStop(idx);
     cb();
   }, dur+100);
@@ -1393,8 +1491,12 @@ function onDone(res,wasFree){
     }
   }
   if(bostonFound && winAmt>0){
+    // Use the multiplier already rolled and shown at reel-stop time
     var mults=[2,3,5];
-    bostonMult=mults[Math.floor(Math.random()*mults.length)];
+    bostonMult=(window._pendingBostonMult && window._pendingBostonMult>0)
+      ? window._pendingBostonMult
+      : mults[Math.floor(Math.random()*mults.length)];
+    window._pendingBostonMult=0; // clear after use
     var preBoston=winAmt;
     winAmt=winAmt*bostonMult;
     // Show the extra amount Boston added (not the full total)
