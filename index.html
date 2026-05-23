@@ -754,7 +754,7 @@ var stickyActive=false;
 var mollysThisSpin=0;   // running count for sound escalation
 
 function checkMollyLand(res,reelIdx,doneCount,wasFree){
-  if(wasFree||stickyActive) return;
+  // Pop and glow fire always; tension messages skip during free spins
   var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0||res[reelIdx][3]===0;
 
   if(hasMolly){
@@ -768,13 +768,13 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
     // MOLLY pop graphic over the reel
     showMollyPop(reelIdx, mollysThisSpin);
 
-    // Tension message
-    if(mollysThisSpin===1) setMsg('🐾 MOLLY! Keep spinning…','win');
-    if(mollysThisSpin===2) setMsg('🐾🐾 TWO MOLLYS! One more…','win');
-    if(mollysThisSpin>=3) setMsg('🐾🐾🐾 THREE MOLLYS! BONUS LOCKED!','big');
-
-    // Screen flash intensity increases
-    flashScreen(0.1+(mollysThisSpin*0.12), 200+(mollysThisSpin*80));
+    if(!wasFree && !stickyActive){
+      // Tension messages only during normal spins
+      if(mollysThisSpin===1) setMsg('🐾 MOLLY! Keep spinning…','win');
+      if(mollysThisSpin===2) setMsg('🐾🐾 TWO MOLLYS! One more…','win');
+      if(mollysThisSpin>=3) setMsg('🐾🐾🐾 THREE MOLLYS! BONUS LOCKED!','big');
+      flashScreen(0.1+(mollysThisSpin*0.12), 200+(mollysThisSpin*80));
+    }
 
   
   }
