@@ -87,11 +87,11 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .pr.scatter-row img{border-color:rgba(255,215,0,.6);box-shadow:0 0 12px rgba(255,215,0,.3)}
 .pr.wild-row img{border-color:rgba(255,80,80,.5);box-shadow:0 0 12px rgba(255,80,80,.25)}
 .pt-info{text-align:center}
-.pt-badge{font-family:'Cinzel',serif;font-size:7px;color:#9a7a3a;letter-spacing:1px;text-transform:uppercase;background:rgba(200,168,76,.1);border:1px solid rgba(200,168,76,.2);border-radius:3px;padding:2px 5px;display:inline-block;margin-bottom:3px}
+.pt-badge{font-family:'Cinzel',serif;font-size:10px;color:#9a7a3a;letter-spacing:1px;text-transform:uppercase;background:rgba(200,168,76,.1);border:1px solid rgba(200,168,76,.2);border-radius:3px;padding:3px 7px;display:inline-block;margin-bottom:5px}
 .pt-badge.sc-badge{color:#c9a84c;border-color:rgba(255,215,0,.3)}
 .pt-badge.wi-badge{color:#ff9090;border-color:rgba(255,80,80,.3)}
-.pn{font-family:'Cinzel',serif;font-size:10px;color:#e8d8a0;display:block;font-weight:700;letter-spacing:1px;margin-bottom:3px}
-.pm{font-family:'Playfair Display',serif;font-size:10px;color:#c9a84c;display:block;line-height:1.6;white-space:pre-line}
+.pn{font-family:'Cinzel',serif;font-size:15px;color:#e8d8a0;display:block;font-weight:700;letter-spacing:1px;margin-bottom:5px}
+.pm{font-family:'Playfair Display',serif;font-size:13px;color:#c9a84c;display:block;line-height:1.8;white-space:pre-line}
 
 /* MODAL */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:99;backdrop-filter:blur(4px)}
@@ -576,6 +576,158 @@ function playScatterTrigger(){
   mkNoise(t+0.5,0.4,0.25,300);
 }
 
+// ── Molly escalation sounds ─────────────────────────────────────────────────
+// count = how many Mollys have landed so far this spin
+function playMollyLand(count){
+  if(!audioCtx) return;
+  var t=audioCtx.currentTime;
+  if(count===1){
+    // Soft chime — "oh interesting..."
+    mkOsc('sine',523.3,t,0.4,0.35);
+    mkOsc('sine',1046.6,t+0.05,0.3,0.15);
+  } else if(count===2){
+    // Two-note ascending hit — tension building
+    mkOsc('sine',659.3,t,0.35,0.45);
+    mkOsc('sine',880,t+0.1,0.45,0.4);
+    mkOsc('sine',1318.5,t+0.18,0.35,0.25);
+    mkNoise(t,0.08,0.2,1200);
+  } else if(count===3){
+    // Three Mollys! Big dramatic reveal
+    [523.3,659.3,783.9,1046.5].forEach(function(f,i){
+      mkOsc('sine',f,t+i*0.06,0.7,0.5);
+    });
+    mkOsc('sine',130,t,0.5,0.6);
+    mkNoise(t+0.2,0.4,0.3,500);
+    // Rising sweep
+    var sw=audioCtx.createOscillator(),sg=audioCtx.createGain();
+    sw.type='sawtooth';
+    sw.frequency.setValueAtTime(300,t+0.3); sw.frequency.exponentialRampToValueAtTime(2200,t+0.9);
+    sg.gain.setValueAtTime(0,t+0.3); sg.gain.linearRampToValueAtTime(0.25,t+0.35);
+    sg.gain.exponentialRampToValueAtTime(0.0001,t+0.95);
+    sw.connect(sg); sg.connect(sfxGain); sw.start(t+0.3); sw.stop(t+1.0);
+  } else if(count===4){
+    // Fourth Molly — even bigger
+    [392,523.3,659.3,783.9,1046.5,1318.5].forEach(function(f,i){
+      mkOsc('sine',f,t+i*0.05,0.8,0.5);
+    });
+    mkOsc('sine',98,t,0.6,0.7);
+    mkNoise(t,0.5,0.4,400);
+  } else if(count>=5){
+    // FIVE MOLLYS — jackpot chaos
+    playMegaWin();
+  }
+}
+
+// ── Sticky respin state ─────────────────────────────────────────────────────
+var stickyMollys=[];    // reel indices with locked Mollys
+var stickyRes=[];       // current full result array
+var stickyActive=false;
+var mollysThisSpin=0;   // running count for sound escalation
+
+function checkMollyLand(res,reelIdx,doneCount,wasFree){
+  if(wasFree||stickyActive) return; // no sticky during free spins
+  // Count Mollys on this reel's center row
+  if(res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0){
+    mollysThisSpin++;
+    playMollyLand(mollysThisSpin);
+    // Visual: pulse the reel gold
+    var reelEl=document.getElementById('t'+reelIdx).parentNode;
+    reelEl.style.transition='box-shadow 0.15s ease-in';
+    reelEl.style.boxShadow='0 0 0 3px #FFD700, 0 0 30px rgba(255,215,0,0.7)';
+    setTimeout(function(){ reelEl.style.transition='box-shadow 0.8s ease-out'; reelEl.style.boxShadow=''; },800);
+  }
+}
+
+function doStickyRespin(res,scatterCount,lockedReels){
+  // Lock the Molly reels visually
+  stickyActive=true;
+  stickyRes=res.slice();
+  stickyMollys=lockedReels.slice();
+
+  // Highlight locked reels with gold border
+  for(var li=0;li<lockedReels.length;li++){
+    var lr=lockedReels[li];
+    var lEl=document.getElementById('t'+lr).parentNode;
+    lEl.style.boxShadow='0 0 0 3px #FFD700, 0 0 25px rgba(255,215,0,0.6)';
+    lEl.style.border='2px solid #FFD700';
+  }
+
+  // Show message
+  setMsg('🐾 '+scatterCount+' MOLLYS LOCKED! Respinning for more...','win');
+  flashScreen(0.4,400);
+
+  // Delay then respin unlocked reels
+  setTimeout(function(){
+    startSpinSound();
+    var freeReels=[];
+    for(var r=0;r<5;r++){ if(lockedReels.indexOf(r)<0) freeReels.push(r); }
+
+    var newRes=stickyRes.slice();
+    for(var fi=0;fi<freeReels.length;fi++){
+      var allowM=(Math.random()<0.35); // slightly higher Molly chance on respin
+      newRes[freeReels[fi]]=rndCol(allowM);
+    }
+
+    var done=0;
+    freeReels.forEach(function(ri,pos){
+      setTimeout(function(){
+        spinReel(ri,newRes[ri],800+pos*100,function(){
+          stopSpinSound();
+          done++;
+          // Check new Mollys
+          if(newRes[ri][0]===0||newRes[ri][1]===0||newRes[ri][2]===0){
+            mollysThisSpin++;
+            playMollyLand(mollysThisSpin);
+            var rEl=document.getElementById('t'+ri).parentNode;
+            rEl.style.boxShadow='0 0 0 3px #FFD700, 0 0 30px rgba(255,215,0,0.7)';
+            rEl.style.border='2px solid #FFD700';
+          }
+          if(done===freeReels.length){
+            stickyActive=false;
+            onStickyDone(newRes,lockedReels);
+          }
+        });
+      },pos*160);
+    });
+  },1200);
+}
+
+function onStickyDone(newRes,prevLocked){
+  // Count total Mollys in center row
+  var mollyReels=[];
+  for(var r=0;r<5;r++){
+    if(newRes[r][0]===0||newRes[r][1]===0||newRes[r][2]===0) mollyReels.push(r);
+  }
+  var total=mollyReels.length;
+
+  // Release old locked reel borders if no longer Molly (shouldn't happen but safety)
+  // Add any new locked reels
+  if(total>=4 && prevLocked.length<4){
+    // Got another Molly — do one more respin if we haven't hit 5 yet
+    if(total<5){
+      setTimeout(function(){ doStickyRespin(newRes,total,mollyReels); },600);
+      return;
+    }
+  }
+
+  // Unlock all reel borders
+  for(var r2=0;r2<5;r2++){
+    var rEl=document.getElementById('t'+r2).parentNode;
+    rEl.style.boxShadow='';
+    rEl.style.border='1px solid rgba(255,255,255,.04)';
+  }
+
+  if(total>=3){
+    playScatterTrigger();
+    setTimeout(function(){ showFSModal(total); },500);
+    document.getElementById('spinBtn').disabled=false;
+  } else {
+    // Didn't get to 3+ in the end — normal no-scatter resolution
+    document.getElementById('spinBtn').disabled=false;
+    setMsg('Better luck next time','');
+  }
+}
+
 // ═══════════════════════════════════════════════════════
 // WIN VISUALS
 // ═══════════════════════════════════════════════════════
@@ -728,6 +880,22 @@ var WT=[2,3,6,7,8,10], WS=0;
 for(var _i=0;_i<WT.length;_i++) WS+=WT[_i];
 function rndSym(){ var r=Math.random()*WS,s=0; for(var i=0;i<SYM.length;i++){s+=WT[i];if(r<s)return i;} return SYM.length-1; }
 
+// Generate a full reel column guaranteeing max 1 Molly (index 0)
+function rndCol(allowMolly){
+  var col=[];
+  var mollyPlaced=false;
+  for(var rw=0;rw<3;rw++){
+    var s=rndSym();
+    // If Molly drawn but not allowed or already placed, reroll until non-Molly
+    while(s===0 && (!allowMolly || mollyPlaced)){
+      s=rndSym();
+    }
+    if(s===0) mollyPlaced=true;
+    col.push(s);
+  }
+  return col;
+}
+
 var bal=100,bet=1,spinning=false,freeSpins=0,freeMult=1;
 var CH=128;
 
@@ -811,16 +979,26 @@ function doSpin(){
     if(bal<bet){ setMsg('Insufficient balance',''); stopSpinSound(); return; }
     bal-=bet; updBal();
   } else { freeSpins--; updFS(); }
+  mollysThisSpin=0;
   setMsg('Spinning\u2026','');
   document.getElementById('spinBtn').disabled=true;
   spinning=true;
 
   var res=[];
-  for(var r=0;r<5;r++){ var col=[]; for(var rw=0;rw<3;rw++) col.push(rndSym()); res.push(col); }
+  // Each reel gets max 1 Molly — decide per-reel whether Molly is allowed
+  // Molly appears on ~30% of reels per spin for natural rarity
+  for(var r=0;r<5;r++){
+    var allowMolly=(Math.random()<0.30);
+    res.push(rndCol(allowMolly));
+  }
   var delays=[0,150,300,450,600], durs=[700,800,900,1000,1100], done=0;
   for(var idx=0;idx<5;idx++){
     (function(i){ setTimeout(function(){
-      spinReel(i,res[i],durs[i],function(){ done++; if(done===5) onDone(res,free); });
+      spinReel(i,res[i],durs[i],function(){
+        done++;
+        checkMollyLand(res,i,done,free);
+        if(done===5) onDone(res,free);
+      });
     },delays[i]); })(idx);
   }
 }
@@ -833,7 +1011,7 @@ function spinReel(idx,finals,dur,cb){
   for(var i=0;i<PAD;i++) t.appendChild(makeCell(rndSym()));
   for(var j=0;j<3;j++) t.appendChild(makeCell(finals[j]));
   t.appendChild(makeCell(rndSym()));
-  var target=(PAD-1)*CH;
+  var target=PAD*CH; // PAD*CH ensures finals[0,1,2] are the 3 visible cells
   requestAnimationFrame(function(){ requestAnimationFrame(function(){
     t.style.transition='transform '+dur+'ms cubic-bezier(0.25,0.1,0.1,1)';
     t.style.transform='translateY(-'+target+'px)';
@@ -846,36 +1024,77 @@ function spinReel(idx,finals,dur,cb){
 
 function onDone(res,wasFree){
   spinning=false;
-  stopSpinSound(); // AUDIO: kill spin noise
+  stopSpinSound();
 
-  var scatters=0;
-  for(var r=0;r<5;r++) for(var rw=0;rw<3;rw++) if(res[r][rw]===0) scatters++;
-  var center=[]; for(var r2=0;r2<5;r2++) center.push(res[r2][1]);
-  var wildI=1,winAmt=0,wcols=[];
-  for(var s=2;s<SYM.length;s++){
-    var cnt=0,cols=[];
-    for(var r3=0;r3<5;r3++){
-      if(center[r3]===s||center[r3]===wildI){ cnt++; cols.push(r3); } else break;
+  // Count Mollys anywhere on grid — scatter counts on any row
+  // But track which reels have a Molly (for sticky lock) using center-row or any-row presence
+  var mollyReels=[];
+  for(var r=0;r<5;r++){
+    if(res[r][0]===0||res[r][1]===0||res[r][2]===0) mollyReels.push(r);
+  }
+  var scatterCount=mollyReels.length;
+
+  // ── 1,024 Ways win evaluation — ALL 3 rows ──────────────────────────────
+  // res[reel][row]: row 0=top, 1=center, 2=bottom
+  // For each of the 3 rows, check left-to-right match of 3-5 symbols (wilds substitute)
+  var wildI=1, winAmt=0;
+  var winningCells=[]; // array of {reel, row} objects to highlight
+
+  for(var row=0;row<3;row++){
+    for(var s=2;s<SYM.length;s++){
+      var cnt=0, cols=[];
+      for(var r3=0;r3<5;r3++){
+        var sym=res[r3][row];
+        if(sym===s||sym===wildI){ cnt++; cols.push(r3); } else break;
+      }
+      if(cnt>=3){
+        winAmt+=SYM[s].mult[cnt]*bet*(wasFree?freeMult:1);
+        for(var ci=0;ci<cols.length;ci++) winningCells.push({reel:cols[ci],row:row});
+      }
     }
-    if(cnt>=3){ winAmt+=SYM[s].mult[cnt]*bet*(wasFree?freeMult:1); for(var ci=0;ci<cols.length;ci++) wcols.push(cols[ci]); }
-  }
-  var PAD=16;
-  for(var wr=0;wr<5;wr++){
-    var cells=document.getElementById('t'+wr).querySelectorAll('.cell');
-    var mid=cells[PAD]; if(mid){ var isW=false; for(var wi2=0;wi2<wcols.length;wi2++) if(wcols[wi2]===wr) isW=true; if(isW) mid.classList.add('winning'); }
   }
 
-  if(scatters>=3&&!wasFree){
-    playScatterTrigger(); // AUDIO: scatter sweep
-    setTimeout(function(){ showFSModal(scatters); },400);
+  // Highlight winning cells
+  // PAD=16, so cell index for (reel, row): PAD+row
+  var PAD=16;
+  for(var wc=0;wc<winningCells.length;wc++){
+    var cells=document.getElementById('t'+winningCells[wc].reel).querySelectorAll('.cell');
+    var cellIdx=PAD+winningCells[wc].row;
+    if(cells[cellIdx]) cells[cellIdx].classList.add('winning');
+  }
+
+  // Pay any regular wins regardless of scatter
+  if(winAmt>0) doWin(winAmt,wasFree);
+
+  // Scatter / sticky respin logic (not during free spins)
+  if(!wasFree){
+    if(scatterCount===1||scatterCount===2){
+      // 1 or 2 Mollys landed — trigger sticky respin to hunt for more
+      if(scatterCount>0){
+        setTimeout(function(){ doStickyRespin(res,scatterCount,mollyReels); },700);
+        document.getElementById('spinBtn').disabled=true;
+        return;
+      }
+    } else if(scatterCount>=3){
+      // 3+ Mollys on initial spin — straight to bonus modal
+      playScatterTrigger();
+      setTimeout(function(){ showFSModal(scatterCount); },500);
+      document.getElementById('spinBtn').disabled=false;
+      return;
+    }
+  } else if(wasFree && scatterCount>=3){
+    // Scatter during free spins — just trigger bonus again
+    playScatterTrigger();
+    setTimeout(function(){ showFSModal(scatterCount); },500);
     document.getElementById('spinBtn').disabled=false;
     return;
   }
 
-  doWin(winAmt,wasFree);
   if(wasFree&&freeSpins===0){
     setTimeout(function(){ updFS(); setMsg('Free Spins complete!','win'); },600);
   }
+  // Reset Molly counter for next spin
+  mollysThisSpin=0;
   document.getElementById('spinBtn').disabled=false;
 }
 
