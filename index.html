@@ -1225,7 +1225,7 @@ function doSpin(){
   // Each reel gets max 1 Molly — decide per-reel whether Molly is allowed
   // Molly appears on ~30% of reels per spin for natural rarity
   for(var r=0;r<5;r++){
-    var allowMolly=(Math.random()<0.50); // 50% chance of allowing Molly on each reel
+    var allowMolly=(Math.random()<(free?0.12:0.50)); // 12% during free spins, 50% normal
     res.push(rndCol(allowMolly));
   }
   // ── Dynamic sequential reel system ──────────────────────────────────────
