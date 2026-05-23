@@ -110,7 +110,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .cell{height:128px;min-height:128px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;padding:4px}
 .cell img{width:116px;height:116px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.09);display:block;box-shadow:0 4px 14px rgba(0,0,0,.6);transition:all .2s}
 .cell.sc img{border-color:#FFD700;box-shadow:0 0 0 2px rgba(255,215,0,.45),0 0 22px rgba(255,215,0,.6)}
-.cell.wi img{border-color:#ff6b6b;box-shadow:0 0 0 2px rgba(255,80,80,.4),0 0 22px rgba(255,80,80,.45)}
+.cell.wi img{border-color:#ff1a1a;box-shadow:0 0 0 3px rgba(255,0,0,.7),0 0 28px rgba(255,0,0,.6)}
 .cell.bo img{border-color:#00ff44;box-shadow:0 0 0 3px rgba(0,255,68,.5),0 0 28px rgba(0,255,68,.7),0 0 50px rgba(0,255,68,.25);animation:bostonGlow 1.2s ease-in-out infinite alternate}
 @keyframes bostonGlow{from{box-shadow:0 0 0 3px rgba(0,255,68,.5),0 0 28px rgba(0,255,68,.7)}to{box-shadow:0 0 0 4px rgba(0,255,68,.8),0 0 40px rgba(0,255,68,.9),0 0 70px rgba(0,255,68,.4)}}
 .cell.winning img{border-color:#FFD700;box-shadow:0 0 0 3px rgba(255,215,0,.7),0 0 36px rgba(255,215,0,.85);animation:wincell .4s ease-in-out infinite alternate}
@@ -121,7 +121,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .controls-row{display:grid;grid-template-columns:200px 220px 200px;gap:10px;align-items:center;justify-content:center}
 .ctrl-panel{background:rgba(0,0,0,.45);border:1px solid rgba(200,168,76,.22);border-radius:10px;padding:10px 14px;position:relative;overflow:hidden}
 .ctrl-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4),transparent)}
-.ctrl-label{font-family:'Cinzel',serif;font-size:8px;color:#7a6030;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px}
+.ctrl-label{font-family:'Cinzel',serif;font-size:11px;color:#FFD700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px;font-weight:700}
 .ctrl-bbtns{display:flex;gap:6px}
 .ctrl-bbtn{flex:1;padding:8px 6px;font-family:'Cinzel',serif;font-size:12px;font-weight:700;border:1px solid rgba(150,110,30,.5);border-radius:6px;cursor:pointer;background:rgba(20,15,5,.8);color:#9a7a3a;transition:all .15s;letter-spacing:1px;text-align:center}
 .ctrl-bbtn.on{background:linear-gradient(135deg,#c8a84c,#8a6010);color:#fff8e0;border-color:#FFD700;box-shadow:0 0 10px rgba(200,168,76,.4)}
@@ -150,12 +150,12 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .pr{flex:1;max-width:175px;display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 8px;background:rgba(0,0,0,.35);border-radius:10px;border:1px solid rgba(200,168,76,.1);transition:all .15s}
 .pr:hover{border-color:rgba(200,168,76,.3);background:rgba(20,15,5,.5)}
 .pr.scatter-row{border-color:rgba(255,215,0,.18)}
-.pr.wild-row{border-color:rgba(255,80,80,.15)}
+.pr.wild-row{border-color:rgba(255,0,0,.3)}
 .pr.boston-row{border-color:rgba(0,255,68,.3)}
 .pr.boston-row img{border-color:#00ff44;box-shadow:0 0 14px rgba(0,255,68,.5)}
 .pr img{width:64px;height:64px;border-radius:10px;object-fit:cover;border:2px solid rgba(200,168,76,.3);box-shadow:0 3px 10px rgba(0,0,0,.6)}
 .pr.scatter-row img{border-color:rgba(255,215,0,.6);box-shadow:0 0 12px rgba(255,215,0,.3)}
-.pr.wild-row img{border-color:rgba(255,80,80,.5);box-shadow:0 0 12px rgba(255,80,80,.25)}
+.pr.wild-row img{border-color:#ff1a1a;box-shadow:0 0 14px rgba(255,0,0,.5)}
 .pt-info{text-align:center}
 .pt-badge{font-family:'Cinzel',serif;font-size:10px;color:#9a7a3a;letter-spacing:1px;text-transform:uppercase;background:rgba(200,168,76,.1);border:1px solid rgba(200,168,76,.2);border-radius:3px;padding:3px 7px;display:inline-block;margin-bottom:5px}
 .pt-badge.sc-badge{color:#c9a84c;border-color:rgba(255,215,0,.3)}
@@ -1015,7 +1015,7 @@ function fireWinEffects(level,amt){
 // ═══════════════════════════════════════════════════════
 var SYM=[
   {id:'molly', lbl:'MOLLY', mult:[0,0,5,15,50,200],img:'molly', sc:true,  wi:false, bo:false},
-  {id:'trump', lbl:'TRUMP', mult:[0,0,0,0,0,0],    img:'trump', sc:false, wi:true,  bo:false},
+  {id:'trump', lbl:'WILDCARD', mult:[0,0,0,0,0,0],  img:'trump', sc:false, wi:true,  bo:false},
   {id:'boston',lbl:'BOSTON',mult:[0,0,0,0,0,0],    img:'boston',sc:false, wi:false, bo:true},
   {id:'geoff', lbl:'GEOFF', mult:[0,0,4,10,25,120],img:'geoff', sc:false, wi:false, bo:false},
   {id:'emily', lbl:'EMILY', mult:[0,0,2,7,20,96],  img:'emily', sc:false, wi:false, bo:false},
