@@ -371,18 +371,20 @@ function mkNoise(t,dur,vol,filterFreq){
   src.start(t); src.stop(t+dur+0.05);
 }
 
-// ── UPBEAT ELECTRIC MUSIC ENGINE ─────────────────────────────────
-// 128 BPM house/electronic feel — driving bass, synth lead, punchy drums
-var BPM=128, BEAT=60/BPM, BAR=BEAT*4;
+// ── HIGH ENERGY ARCADE CASINO MUSIC ──────────────────────────────────────
+// 145 BPM — driving, urgent, electric. Hard kick, aggressive bass, bright lead.
+var BPM=145, BEAT=60/BPM, BAR=BEAT*4;
 
-// Chord root frequencies for E minor groove: Em / C / G / D
-var ROOTS=[82.4, 65.4, 98.0, 73.4];
-// Pentatonic lead notes over the progression
-var LEAD_SEQS=[
-  [329.6,392,440,392,329.6,293.7,329.6,392],
-  [261.6,293.7,329.6,293.7,261.6,246.9,261.6,293.7],
-  [392,440,493.9,440,392,349.2,392,440],
-  [293.7,329.6,369.9,329.6,293.7,261.6,293.7,329.6]
+// 4-bar loop with key changes: Am / F / C / G (pop-energetic)
+var PROG_BASS = [110, 87.3, 130.8, 98.0];   // A2, F2, C3, G2
+var PROG_ROOTS= [220, 174.6, 261.6, 196.0]; // A3, F3, C4, G3
+
+// Lead melody — bright 16th-note pattern, energetic
+var LEAD_SEQS = [
+  [440,523,659,784,659,523,440,392,440,523,659,784,880,784,659,523],
+  [349,440,523,659,523,440,349,330,349,440,523,659,698,659,523,440],
+  [523,659,784,1047,784,659,523,493,523,659,784,1047,1175,1047,784,659],
+  [392,493,587,784,587,493,392,349,392,493,587,784,880,784,587,493],
 ];
 
 function startMusic(){
@@ -397,141 +399,163 @@ function scheduleMusic(startAt){
 
   for(var ci=0;ci<loopBars;ci++){
     var t=startAt+ci*BAR;
-    var root=ROOTS[ci];
+    var bass=PROG_BASS[ci];
+    var root=PROG_ROOTS[ci];
 
-    // ── Driving sidechain-style bass ──
-    // Four-on-the-floor bass hits, each with pitch envelope
-    for(var bb=0;bb<4;bb++){
+    // ── Hard kick on every beat ──
+    for(var kb=0;kb<4;kb++){
       (function(b){
-        var tb=t+b*BEAT;
-        var bo=audioCtx.createOscillator(), bg=audioCtx.createGain();
-        bo.type='square';
-        bo.frequency.setValueAtTime(root*2, tb);
-        bo.frequency.exponentialRampToValueAtTime(root*0.8, tb+0.08);
-        bg.gain.setValueAtTime(0,tb);
-        bg.gain.linearRampToValueAtTime(0.7,tb+0.01);
-        bg.gain.exponentialRampToValueAtTime(0.0001,tb+BEAT*0.7);
-        // Slight distortion via waveshaper
-        var ws=audioCtx.createWaveShaper();
-        var curve=new Float32Array(256);
-        for(var k=0;k<256;k++){ var x=k*2/256-1; curve[k]=x<0?-Math.pow(-x,0.7):Math.pow(x,0.7); }
-        ws.curve=curve;
-        bo.connect(ws); ws.connect(bg); bg.connect(musicGain);
-        bo.start(tb); bo.stop(tb+BEAT);
+        var tk=t+b*BEAT;
+        // Kick thump
+        var ko=audioCtx.createOscillator(),kg=audioCtx.createGain();
+        ko.type='sine';
+        ko.frequency.setValueAtTime(200,tk);
+        ko.frequency.exponentialRampToValueAtTime(35,tk+0.07);
+        kg.gain.setValueAtTime(0,tk); kg.gain.linearRampToValueAtTime(1.0,tk+0.004);
+        kg.gain.exponentialRampToValueAtTime(0.0001,tk+0.16);
+        ko.connect(kg); kg.connect(musicGain); ko.start(tk); ko.stop(tk+0.18);
+        musicNodes.push(ko);
+        // Kick click transient
+        var ksz=Math.floor(audioCtx.sampleRate*0.025);
+        var kbuf=audioCtx.createBuffer(1,ksz,audioCtx.sampleRate);
+        var kd=kbuf.getChannelData(0);
+        for(var k=0;k<ksz;k++) kd[k]=(Math.random()*2-1)*(1-k/ksz);
+        var ksrc=audioCtx.createBufferSource(); ksrc.buffer=kbuf;
+        var kf=audioCtx.createBiquadFilter(); kf.type='lowpass'; kf.frequency.value=3000;
+        var kgn=audioCtx.createGain(); kgn.gain.value=0.5;
+        ksrc.connect(kf); kf.connect(kgn); kgn.connect(musicGain);
+        ksrc.start(tk); ksrc.stop(tk+0.03);
+        musicNodes.push(ksrc);
+      })(kb);
+    }
+
+    // ── Driving bass synth — 8th note pump ──
+    for(var bb=0;bb<8;bb++){
+      (function(b){
+        var tb=t+b*(BEAT/2);
+        var accent=(b%2===0)?1.0:0.65;
+        var bo=audioCtx.createOscillator(),bg=audioCtx.createGain();
+        bo.type='sawtooth';
+        bo.frequency.setValueAtTime(bass*2,tb);
+        // Pitch envelope for "pump" feel
+        bo.frequency.exponentialRampToValueAtTime(bass*1.8,tb+BEAT*0.18);
+        var lp=audioCtx.createBiquadFilter(); lp.type='lowpass';
+        lp.frequency.setValueAtTime(1800,tb);
+        lp.frequency.exponentialRampToValueAtTime(600,tb+BEAT*0.22);
+        lp.Q.value=3;
+        bg.gain.setValueAtTime(0,tb); bg.gain.linearRampToValueAtTime(0.7*accent,tb+0.008);
+        bg.gain.exponentialRampToValueAtTime(0.0001,tb+BEAT*0.42);
+        bo.connect(lp); lp.connect(bg); bg.connect(musicGain);
+        bo.start(tb); bo.stop(tb+BEAT*0.45);
         musicNodes.push(bo);
+        // Sub sine underneath
+        var so2=audioCtx.createOscillator(),sg2=audioCtx.createGain();
+        so2.type='sine'; so2.frequency.value=bass;
+        sg2.gain.setValueAtTime(0,tb); sg2.gain.linearRampToValueAtTime(0.55*accent,tb+0.01);
+        sg2.gain.exponentialRampToValueAtTime(0.0001,tb+BEAT*0.45);
+        so2.connect(sg2); sg2.connect(musicGain); so2.start(tb); so2.stop(tb+BEAT*0.48);
+        musicNodes.push(so2);
       })(bb);
     }
 
-    // ── Sub bass (sine) for warmth ──
-    var sb=audioCtx.createOscillator(), sg=audioCtx.createGain();
-    sb.type='sine'; sb.frequency.value=root;
-    sg.gain.setValueAtTime(0,t); sg.gain.linearRampToValueAtTime(0.6,t+0.05);
-    sg.gain.setValueAtTime(0.6,t+BAR-0.1); sg.gain.linearRampToValueAtTime(0,t+BAR);
-    sb.connect(sg); sg.connect(musicGain); sb.start(t); sb.stop(t+BAR+0.05);
-    musicNodes.push(sb);
+    // ── Aggressive snare on 2 and 4 ──
+    [1,3].forEach(function(b){
+      var ts=t+b*BEAT;
+      // Body
+      var sno=audioCtx.createOscillator(),sng=audioCtx.createGain();
+      sno.type='triangle'; sno.frequency.value=220;
+      sng.gain.setValueAtTime(0,ts); sng.gain.linearRampToValueAtTime(0.6,ts+0.003);
+      sng.gain.exponentialRampToValueAtTime(0.0001,ts+0.09);
+      sno.connect(sng); sng.connect(musicGain); sno.start(ts); sno.stop(ts+0.11);
+      musicNodes.push(sno);
+      // Noise crack
+      var nsz=Math.floor(audioCtx.sampleRate*0.08);
+      var nbuf=audioCtx.createBuffer(1,nsz,audioCtx.sampleRate);
+      var nd=nbuf.getChannelData(0);
+      for(var k=0;k<nsz;k++) nd[k]=(Math.random()*2-1)*(1-k/nsz);
+      var nsrc=audioCtx.createBufferSource(); nsrc.buffer=nbuf;
+      var nf=audioCtx.createBiquadFilter(); nf.type='bandpass';
+      nf.frequency.value=4000; nf.Q.value=0.7;
+      var ng=audioCtx.createGain(); ng.gain.value=0.65;
+      nsrc.connect(nf); nf.connect(ng); ng.connect(musicGain);
+      nsrc.start(ts); nsrc.stop(ts+0.09);
+      musicNodes.push(nsrc);
+    });
 
-    // ── Synth lead arpeggio (16th notes) ──
-    var seq=LEAD_SEQS[ci];
-    for(var si=0;si<seq.length;si++){
-      (function(freq,step){
-        var tl=t+step*(BEAT/2);
-        var lo=audioCtx.createOscillator(), lg=audioCtx.createGain();
-        lo.type='sawtooth'; lo.frequency.value=freq;
-        // Detune second layer slightly for fatness
-        var lo2=audioCtx.createOscillator(), lg2=audioCtx.createGain();
-        lo2.type='sawtooth'; lo2.frequency.value=freq*1.005;
-        // Low-pass filter for that classic synth sound
-        var lp=audioCtx.createBiquadFilter();
-        lp.type='lowpass';
-        lp.frequency.setValueAtTime(800,tl);
-        lp.frequency.linearRampToValueAtTime(3000,tl+0.06);
-        lp.frequency.exponentialRampToValueAtTime(600,tl+BEAT*0.4);
-        lp.Q.value=4;
-        lg.gain.setValueAtTime(0,tl); lg.gain.linearRampToValueAtTime(0.28,tl+0.01);
-        lg.gain.exponentialRampToValueAtTime(0.0001,tl+BEAT*0.45);
-        lg2.gain.setValueAtTime(0,tl); lg2.gain.linearRampToValueAtTime(0.14,tl+0.01);
-        lg2.gain.exponentialRampToValueAtTime(0.0001,tl+BEAT*0.45);
-        lo.connect(lp); lo2.connect(lp); lp.connect(lg); lp.connect(lg2);
-        lg.connect(musicGain); lg2.connect(musicGain);
-        lo.start(tl); lo.stop(tl+BEAT*0.5);
-        lo2.start(tl); lo2.stop(tl+BEAT*0.5);
-        musicNodes.push(lo); musicNodes.push(lo2);
-      })(seq[si],si);
+    // ── Open hi-hat every 16th note ──
+    for(var hb=0;hb<16;hb++){
+      (function(b){
+        var th=t+b*(BEAT/4);
+        var accent=b%4===0?0.3:b%2===0?0.18:0.1;
+        var hsz=Math.floor(audioCtx.sampleRate*0.04);
+        var hbuf=audioCtx.createBuffer(1,hsz,audioCtx.sampleRate);
+        var hd=hbuf.getChannelData(0);
+        for(var k=0;k<hsz;k++) hd[k]=(Math.random()*2-1)*(1-k/hsz);
+        var hsrc=audioCtx.createBufferSource(); hsrc.buffer=hbuf;
+        var hpf=audioCtx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=9000;
+        var hg=audioCtx.createGain(); hg.gain.value=accent;
+        hsrc.connect(hpf); hpf.connect(hg); hg.connect(musicGain);
+        hsrc.start(th); hsrc.stop(th+0.045);
+        musicNodes.push(hsrc);
+      })(hb);
     }
 
-    // ── Chord stabs on beat 2 and 4 ──
-    [1,3].forEach(function(b){
+    // ── Bright lead synth — 16th note melody ──
+    var seq=LEAD_SEQS[ci];
+    for(var li=0;li<seq.length;li++){
+      (function(freq,step){
+        var tl=t+step*(BEAT/4);
+        // Dual detuned saws through bright filter
+        [0, 3].forEach(function(detune){
+          var lo=audioCtx.createOscillator(),lg=audioCtx.createGain();
+          lo.type='sawtooth'; lo.frequency.value=freq*(1+detune*0.001);
+          var lp2=audioCtx.createBiquadFilter(); lp2.type='lowpass';
+          lp2.frequency.setValueAtTime(3500,tl);
+          lp2.frequency.exponentialRampToValueAtTime(1200,tl+BEAT*0.22);
+          lp2.Q.value=5;
+          lg.gain.setValueAtTime(0,tl); lg.gain.linearRampToValueAtTime(0.22,tl+0.008);
+          lg.gain.exponentialRampToValueAtTime(0.0001,tl+BEAT*0.26);
+          lo.connect(lp2); lp2.connect(lg); lg.connect(musicGain);
+          lo.start(tl); lo.stop(tl+BEAT*0.28);
+          musicNodes.push(lo);
+        });
+      })(seq[li],li);
+    }
+
+    // ── Chord stabs on off-beats (uplifting) ──
+    [0.5,1.5,2.5,3.5].forEach(function(b){
       var tc=t+b*BEAT;
-      [root*2, root*2.5, root*3, root*4].forEach(function(f){
-        var co=audioCtx.createOscillator(), cg=audioCtx.createGain();
+      // Bright major chord stab
+      [root,root*1.25,root*1.5,root*2].forEach(function(f){
+        var co=audioCtx.createOscillator(),cg=audioCtx.createGain();
         co.type='square'; co.frequency.value=f;
-        var cf=audioCtx.createBiquadFilter(); cf.type='lowpass'; cf.frequency.value=1200; cf.Q.value=2;
-        cg.gain.setValueAtTime(0,tc); cg.gain.linearRampToValueAtTime(0.12,tc+0.01);
-        cg.gain.exponentialRampToValueAtTime(0.0001,tc+BEAT*0.25);
+        var cf=audioCtx.createBiquadFilter(); cf.type='bandpass';
+        cf.frequency.value=f*1.5; cf.Q.value=2;
+        cg.gain.setValueAtTime(0,tc); cg.gain.linearRampToValueAtTime(0.09,tc+0.006);
+        cg.gain.exponentialRampToValueAtTime(0.0001,tc+BEAT*0.18);
         co.connect(cf); cf.connect(cg); cg.connect(musicGain);
-        co.start(tc); co.stop(tc+BEAT*0.3);
+        co.start(tc); co.stop(tc+BEAT*0.2);
         musicNodes.push(co);
       });
     });
 
-    // ── Kick drum (every beat) ──
-    for(var kb=0;kb<4;kb++){
-      (function(b){
-        var tk=t+b*BEAT;
-        var ko=audioCtx.createOscillator(), kg=audioCtx.createGain();
-        ko.type='sine';
-        ko.frequency.setValueAtTime(180,tk);
-        ko.frequency.exponentialRampToValueAtTime(40,tk+0.08);
-        kg.gain.setValueAtTime(0,tk); kg.gain.linearRampToValueAtTime(0.9,tk+0.005);
-        kg.gain.exponentialRampToValueAtTime(0.0001,tk+0.18);
-        ko.connect(kg); kg.connect(musicGain); ko.start(tk); ko.stop(tk+0.2);
-        musicNodes.push(ko);
-        // Kick body click
-        mkNoise(tk,0.03,0.4,200);
-      })(kb);
-    }
-
-    // ── Snare on beats 2 & 4 ──
-    [1,3].forEach(function(b){
-      var ts=t+b*BEAT;
-      var sno=audioCtx.createOscillator(), sng=audioCtx.createGain();
-      sno.type='triangle'; sno.frequency.value=200;
-      sng.gain.setValueAtTime(0,ts); sng.gain.linearRampToValueAtTime(0.4,ts+0.005);
-      sng.gain.exponentialRampToValueAtTime(0.0001,ts+0.12);
-      sno.connect(sng); sng.connect(musicGain); sno.start(ts); sno.stop(ts+0.14);
-      musicNodes.push(sno);
-      // Snare noise burst
-      var snBuf=audioCtx.createBuffer(1,Math.floor(audioCtx.sampleRate*0.1),audioCtx.sampleRate);
-      var snD=snBuf.getChannelData(0);
-      for(var k=0;k<snD.length;k++) snD[k]=(Math.random()*2-1)*(1-k/snD.length);
-      var snSrc=audioCtx.createBufferSource(); snSrc.buffer=snBuf;
-      var snF=audioCtx.createBiquadFilter(); snF.type='highpass'; snF.frequency.value=2000;
-      var snG=audioCtx.createGain(); snG.gain.value=0.5;
-      snSrc.connect(snF); snF.connect(snG); snG.connect(musicGain);
-      snSrc.start(ts); snSrc.stop(ts+0.12);
-      musicNodes.push(snSrc);
-    });
-
-    // ── Open hi-hat 8th notes ──
-    for(var hb=0;hb<8;hb++){
-      (function(b){
-        var th=t+b*(BEAT/2);
-        var hBuf=audioCtx.createBuffer(1,Math.floor(audioCtx.sampleRate*0.08),audioCtx.sampleRate);
-        var hD=hBuf.getChannelData(0);
-        for(var k=0;k<hD.length;k++) hD[k]=(Math.random()*2-1)*(1-k/hD.length);
-        var hSrc=audioCtx.createBufferSource(); hSrc.buffer=hBuf;
-        var hpF=audioCtx.createBiquadFilter(); hpF.type='highpass'; hpF.frequency.value=7000;
-        var hG=audioCtx.createGain(); hG.gain.value=b%2===0?0.22:0.12;
-        hSrc.connect(hpF); hpF.connect(hG); hG.connect(musicGain);
-        hSrc.start(th); hSrc.stop(th+0.09);
-        musicNodes.push(hSrc);
-      })(hb);
+    // ── Rising arp fill at end of bar (energy buildup) ──
+    if(ci===3){
+      var arpNotes=[523,659,784,880,1047,1175,1319,1568];
+      arpNotes.forEach(function(f,i){
+        var ta=t+BAR-BEAT+(i*(BEAT/8));
+        var ao=audioCtx.createOscillator(),ag=audioCtx.createGain();
+        ao.type='sine'; ao.frequency.value=f;
+        ag.gain.setValueAtTime(0,ta); ag.gain.linearRampToValueAtTime(0.18,ta+0.01);
+        ag.gain.exponentialRampToValueAtTime(0.0001,ta+BEAT*0.12);
+        ao.connect(ag); ag.connect(musicGain); ao.start(ta); ao.stop(ta+BEAT*0.15);
+        musicNodes.push(ao);
+      });
     }
   }
 
-  setTimeout(function(){ if(musicPlaying) scheduleMusic(startAt+loopLen); },(loopLen-0.15)*1000);
+  setTimeout(function(){ if(musicPlaying) scheduleMusic(startAt+loopLen); },(loopLen-0.12)*1000);
 }
-
 function startSpinSound(){
   if(!audioCtx) return;
   stopSpinSound();
@@ -670,17 +694,44 @@ var stickyActive=false;
 var mollysThisSpin=0;   // running count for sound escalation
 
 function checkMollyLand(res,reelIdx,doneCount,wasFree){
-  if(wasFree||stickyActive) return; // no sticky during free spins
-  // Count Mollys on this reel's center row
-  if(res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0){
+  if(wasFree||stickyActive) return;
+  var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0;
+
+  if(hasMolly){
     mollysThisSpin++;
     playMollyLand(mollysThisSpin);
-    // Visual: pulse the reel gold
+    // Gold reel pulse
     var reelEl=document.getElementById('t'+reelIdx).parentNode;
-    reelEl.style.transition='box-shadow 0.15s ease-in';
-    reelEl.style.boxShadow='0 0 0 3px #FFD700, 0 0 30px rgba(255,215,0,0.7)';
-    setTimeout(function(){ reelEl.style.transition='box-shadow 0.8s ease-out'; reelEl.style.boxShadow=''; },800);
+    reelEl.style.transition='box-shadow 0.12s ease-in';
+    reelEl.style.boxShadow='0 0 0 4px #FFD700, 0 0 40px rgba(255,215,0,0.85)';
+    setTimeout(function(){ reelEl.style.transition='box-shadow 1.0s ease-out'; reelEl.style.boxShadow=''; },900);
+
+    // Tension message
+    if(mollysThisSpin===1) setMsg('🐾 MOLLY! Keep spinning…','win');
+    if(mollysThisSpin===2) setMsg('🐾🐾 TWO MOLLYS! One more…','win');
+    if(mollysThisSpin>=3) setMsg('🐾🐾🐾 THREE MOLLYS! BONUS LOCKED!','big');
+
+    // Screen flash intensity increases
+    flashScreen(0.1+(mollysThisSpin*0.12), 200+(mollysThisSpin*80));
+
+  } else if(!hasMolly && reelIdx===2 && mollysThisSpin===0){
+    // Reel 3 lands, still no Molly — bonus officially impossible
+    playDeflate();
+    setMsg('No bonus this spin…','');
   }
+}
+
+// Deflation sound — descending tone when bonus chance is gone
+function playDeflate(){
+  if(!audioCtx) return;
+  var t=audioCtx.currentTime;
+  var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(400,t);
+  o.frequency.exponentialRampToValueAtTime(180,t+0.4);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.2,t+0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);
+  o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t+0.5);
 }
 
 // doStickyRespin: lockedReels=reels with Mollys locked, freeReels=reels to spin
@@ -920,15 +971,15 @@ var SYM=[
   {id:'molly', lbl:'MOLLY', mult:[0,0,5,15,50,200],img:'molly', sc:true,  wi:false, bo:false},
   {id:'trump', lbl:'TRUMP', mult:[0,0,0,0,0,0],    img:'trump', sc:false, wi:true,  bo:false},
   {id:'boston',lbl:'BOSTON',mult:[0,0,0,0,0,0],    img:'boston',sc:false, wi:false, bo:true},
-  {id:'geoff', lbl:'GEOFF', mult:[0,0,3,8,25,100], img:'geoff', sc:false, wi:false, bo:false},
-  {id:'emily', lbl:'EMILY', mult:[0,0,2,6,20,80],  img:'emily', sc:false, wi:false, bo:false},
-  {id:'kalynn',lbl:'KALYNN',mult:[0,0,2,5,15,60],  img:'kalynn',sc:false, wi:false, bo:false},
-  {id:'brady', lbl:'BRADY', mult:[0,0,1,4,12,50],  img:'brady', sc:false, wi:false, bo:false},
-  {id:'ball',  lbl:'BALL',  mult:[0,0,1,2,5,20],   img:'ball',  sc:false, wi:false, bo:false}
+  {id:'geoff', lbl:'GEOFF', mult:[0,0,4,10,25,120],img:'geoff', sc:false, wi:false, bo:false},
+  {id:'emily', lbl:'EMILY', mult:[0,0,2,7,20,96],  img:'emily', sc:false, wi:false, bo:false},
+  {id:'kalynn',lbl:'KALYNN',mult:[0,0,2,6,15,74],  img:'kalynn',sc:false, wi:false, bo:false},
+  {id:'brady', lbl:'BRADY', mult:[0,0,1,4,12,58],  img:'brady', sc:false, wi:false, bo:false},
+  {id:'ball',  lbl:'BALL',  mult:[0,0,1,2,5,22],   img:'ball',  sc:false, wi:false, bo:false}
 ];
 // Weights: molly=rare, trump=uncommon, boston=very rare, geoff/emily/kalynn/brady/ball=common
 // More symbols = less frequent wins
-var WT=[2,3,1,7,8,9,10,12], WS=0;
+var WT=[2,1,1,7,8,9,10,12], WS=0; // trump weight reduced 3->1 for balanced RTP
 for(var _i=0;_i<WT.length;_i++) WS+=WT[_i];
 function rndSym(){ var r=Math.random()*WS,s=0; for(var i=0;i<SYM.length;i++){s+=WT[i];if(r<s)return i;} return SYM.length-1; }
 
@@ -1049,16 +1100,53 @@ function doSpin(){
     var allowMolly=(Math.random()<0.50); // 50% chance of allowing Molly on each reel
     res.push(rndCol(allowMolly));
   }
-  var delays=[0,150,300,450,600], durs=[700,800,900,1000,1100], done=0;
-  for(var idx=0;idx<5;idx++){
-    (function(i){ setTimeout(function(){
-      spinReel(i,res[i],durs[i],function(){
-        done++;
-        checkMollyLand(res,i,done,free);
-        if(done===5) onDone(res,free);
-      });
-    },delays[i]); })(idx);
+  // ── Dynamic sequential reel system ──────────────────────────────────────
+  // Reels land one at a time. Speed increases with each Molly found.
+  // If no Molly by reel 3, reels 4-5 slow down (no chance at bonus).
+  var reelsDone=0;
+  var mollysSoFar=0; // track during this spin for speed decisions
+
+  function launchReel(reelIdx){
+    var baseDur, startDelay;
+
+    // Base duration based on position
+    var baseTimes=[700,750,800,850,900];
+    baseDur=baseTimes[reelIdx];
+
+    // Adjust speed based on Molly drama state
+    if(mollysSoFar>=2){
+      // 2 Mollys already — overdrive! Reel flies
+      baseDur=Math.max(320,baseDur-350);
+    } else if(mollysSoFar===1){
+      // 1 Molly — speeding up
+      baseDur=Math.max(400,baseDur-220);
+    } else if(reelIdx>=3 && mollysSoFar===0){
+      // Reels 4-5, no Molly yet — slow down, game already lost for bonus
+      baseDur=baseDur+200;
+    }
+
+    spinReel(reelIdx, res[reelIdx], baseDur, function(){
+      reelsDone++;
+      // Check if this reel has a Molly (any row)
+      var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0;
+      if(hasMolly) mollysSoFar++;
+
+      // Trigger Molly land effects
+      checkMollyLand(res,reelIdx,reelsDone,free);
+
+      if(reelsDone===5){
+        onDone(res,free);
+      } else {
+        // Stagger between reels — shorter gap when excited
+        var gap = mollysSoFar>0 ? 60 : 120;
+        if(mollysSoFar>=2) gap=30;
+        setTimeout(function(){ launchReel(reelsDone); }, gap);
+      }
+    });
   }
+
+  // Start first reel after brief pause
+  setTimeout(function(){ launchReel(0); }, 80);
 }
 document.getElementById('spinBtn').addEventListener('click', doSpin);
 
