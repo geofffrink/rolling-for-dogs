@@ -337,7 +337,7 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
         <span class="rule-icon">🐾</span>
         <div class="rule-text">
           <strong>Molly Bonus Round</strong>
-          Land 3 Mollys on one spin to lock them in and trigger 2 bonus spins. Build to 4 or 5 Mollys for up to <span style="color:#FFD700;font-weight:700">30 Free Spins at 5x</span>!
+          Land 3 Mollys on one spin to trigger the bonus — choose <span style="color:#FFD700;font-weight:700">10, 12, or 15 Free Spins</span> with a multiplier!
         </div>
       </li>
       <li>
@@ -1161,466 +1161,154 @@ function rain(count,opts,dur){
 
 function fireWinEffects(level,amt){
   var amtStr=amt?amt.toFixed(2):null;
-  if(level==='small'){
-    flashScreen(0.3,300);
-    glowMachine('rgba(255,215,0,.4)',800);
-    showWinText('WIN','#FFD700',1800,amtStr);
-    burst(18,{shape:'coin',size:10,upForce:14,spread:10,life:1400,gravity:0.4});
-    burst(10,{shape:'star',size:8,upForce:12,spread:14,life:1200,gravity:0.38});
-  } else if(level==='big'){
-    flashScreen(0.55,500);
-    glowMachine('rgba(255,180,0,.7)',1200);
-    showWinText('BIG WIN!','#FFD700',2200,amtStr);
-    pulseMachine(3,'rgba(255,180,0,.6)');
-    burst(40,{shape:'coin',size:12,upForce:20,spread:16,life:1800,gravity:0.38});
-    burst(25,{shape:'star',size:10,upForce:18,spread:20,life:1600,gravity:0.35});
-    burst(20,{shape:'diamond',size:8,upForce:16,spread:18,life:1400,gravity:0.4});
-    rain(30,{shape:'coin',size:10,gravity:0.5,life:1800},800);
-  } else {
-    flashScreen(0.85,800);
-    glowMachine('rgba(255,100,0,.9)',2000);
-    showWinText('MEGA WIN!!!','#FF9500',3200,amtStr);
-    pulseMachine(6,'rgba(255,120,0,.75)');
-    burst(60,{shape:'coin',size:14,upForce:24,spread:20,life:2400,gravity:0.35});
-    burst(40,{shape:'star',size:12,upForce:22,spread:24,life:2200,gravity:0.32});
-    burst(30,{shape:'diamond',size:10,upForce:20,spread:22,life:2000,gravity:0.38});
-    setTimeout(function(){ flashScreen(0.5,400); burst(50,{shape:'coin',size:12,upForce:22,spread:22,life:2000,gravity:0.36}); burst(30,{shape:'star',size:10,upForce:20,spread:26,life:1800,gravity:0.33}); },500);
-    setTimeout(function(){ flashScreen(0.4,300); burst(40,{shape:'coin',size:11,upForce:20,spread:20,life:1800,gravity:0.37}); },1000);
-    rain(80,{shape:'coin',size:11,gravity:0.48,life:2200},2500);
-    rain(40,{shape:'star',size:9,gravity:0.44,life:2000},2000);
-  }
-}
 
-// ═══════════════════════════════════════════════════════
-// GAME LOGIC
-// ═══════════════════════════════════════════════════════
-var SYM=[
-  {id:'molly', lbl:'MOLLY', mult:[0,0,5,15,50,200],img:'molly', sc:true,  wi:false, bo:false},
-  {id:'trump', lbl:'WILDCARD', mult:[0,0,0,0,0,0],  img:'trump', sc:false, wi:true,  bo:false},
-  {id:'boston',lbl:'BOSTON',mult:[0,0,0,0,0,0],    img:'boston',sc:false, wi:false, bo:true},
-  {id:'geoff', lbl:'GEOFF', mult:[0,0,4,10,25,120],img:'geoff', sc:false, wi:false, bo:false},
-  {id:'emily', lbl:'EMILY', mult:[0,0,2,7,20,96],  img:'emily', sc:false, wi:false, bo:false},
-  {id:'kalynn',lbl:'KALYNN',mult:[0,0,2,6,15,74],  img:'kalynn',sc:false, wi:false, bo:false},
-  {id:'brady', lbl:'BRADY', mult:[0,0,1,4,12,58],  img:'brady', sc:false, wi:false, bo:false},
-  {id:'ball',  lbl:'BALL',  mult:[0,0,1,2,5,22],   img:'ball',  sc:false, wi:false, bo:false}
-];
-// Weights: molly=rare, trump=uncommon, boston=very rare, geoff/emily/kalynn/brady/ball=common
-// More symbols = less frequent wins
-var WT=[2,1,1,7,8,9,10,3], WS=0; // ball=3, trump=1 for balanced RTP
-for(var _i=0;_i<WT.length;_i++) WS+=WT[_i];
-function rndSym(){ var r=Math.random()*WS,s=0; for(var i=0;i<SYM.length;i++){s+=WT[i];if(r<s)return i;} return SYM.length-1; }
-
-// Generate a full reel column guaranteeing max 1 Molly, max 1 Boston per reel
-function rndCol(allowMolly){
-  var col=[];
-  var used={};   // track all symbols placed on this reel — no duplicates
-  for(var rw=0;rw<4;rw++){  // 4 rows now
-    var s=rndSym();
-    var attempts=0;
-    while(attempts<40 && (used[s]===true || (s===0 && !allowMolly))){
-      s=rndSym();
-      attempts++;
+  // ── Helper: burst from a specific x position ──
+  function burstFrom(x, count, opts){
+    for(var i=0;i<count;i++){
+      (function(i){ setTimeout(function(){
+        createParticle(x+(Math.random()-0.5)*120, window.innerHeight*0.4, opts);
+      }, i*15); })(i);
     }
-    used[s]=true;
-    col.push(s);
   }
-  return col;
-}
 
-var bal=100,bet=1,spinning=false,freeSpins=0,freeMult=1;
-var lastWinLines=[];
-var CH=128; // 4 rows × 128px = 512px reel height
-
-// Paytable
-(function(){
-  var c=document.getElementById('ptrows');
-  for(var i=0;i<SYM.length;i++){
-    var s=SYM[i];
-    var d=document.createElement('div'); d.className='pr'+(s.sc?' scatter-row':s.wi?' wild-row':s.bo?' boston-row':'');
-    var img=document.createElement('img'); img.src=IMGS[s.img]; img.alt=s.lbl;
-    var info=document.createElement('div'); info.className='pt-info';
-    var badge=document.createElement('span');
-    badge.className='pt-badge'+(s.sc?' sc-badge':s.wi?' wi-badge':s.bo?' bo-badge':'');
-    badge.textContent=s.sc?'SCATTER':s.wi?'WILD':s.bo?'MULTIPLIER':'SYMBOL';
-    var n=document.createElement('span'); n.className='pn'; n.textContent=s.lbl;
-    var m=document.createElement('span'); m.className='pm';
-    if(s.sc) m.textContent='3x \u2192 x5\n4x \u2192 x15\n5x \u2192 x50';
-    else if(s.wi) m.textContent='Substitutes all\nsymbols except\nMolly';
-    else if(s.bo) m.textContent='Rare! Multiplies\nany win by\n2x, 3x, or 5x';
-    else m.textContent='3x \u2192 x'+s.mult[2]+'\n4x \u2192 x'+s.mult[3]+'\n5x \u2192 x'+s.mult[5];
-    info.appendChild(badge); info.appendChild(n); info.appendChild(m);
-    d.appendChild(img); d.appendChild(info); c.appendChild(d);
-  }
-})();
-
-function makeCell(si){
-  var s=SYM[si];
-  var d=document.createElement('div'); d.className='cell'+(s.sc?' sc':'')+(s.wi?' wi':'')+(s.bo?' bo':'');
-  var img=document.createElement('img'); img.src=IMGS[s.img]; img.alt=s.lbl;
-  var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.lbl;
-  d.appendChild(img); d.appendChild(lbl); return d;
-}
-
-function initReel(id){
-  var t=document.getElementById(id); t.innerHTML='';
-  for(var i=0;i<10;i++) t.appendChild(makeCell(rndSym()));
-  t.style.transform='translateY(-'+CH+'px)';
-}
-for(var ri=0;ri<5;ri++) initReel('t'+ri);
-
-function setMsg(txt,cls){
-  var b=document.getElementById('resultMsg'); b.textContent=txt; b.className='result-msg'+(cls?' '+cls:'');
-  document.getElementById('resultBox').className='result-box'+(cls?' '+cls:'');
-}
-function updBal(){ document.getElementById('bal').textContent='$'+bal.toFixed(2); }
-updBal();
-
-// ── INTRO SCREEN LOGIC ──────────────────────────────────────────
-document.getElementById('introMolly').src = IMGS.molly;
-document.getElementById('introScreen').style.backgroundImage = 'url('+BG+')';
-
-document.getElementById('introPlayBtn').addEventListener('click', function(){
-  var intro = document.getElementById('introScreen');
-  intro.style.transition = 'opacity 0.6s ease-out';
-  intro.style.opacity = '0';
-  setTimeout(function(){ intro.style.display = 'none'; }, 620);
-  // Init audio on this click so music is ready for first spin
-  initAudio();
-});
-
-function setBet(b){
-  if(spinning||freeSpins>0) return;
-  bet=b;
-  document.getElementById('betdisp').textContent='$'+b+'.00';
-  ['cb1','cb5','cb10'].forEach(function(id,i){
-    document.getElementById(id).className='ctrl-bbtn'+([1,5,10][i]===b?' on':'');
-  });
-}
-document.getElementById('cb1').addEventListener('click',  function(){ setBet(1);  });
-document.getElementById('cb5').addEventListener('click',  function(){ setBet(5);  });
-document.getElementById('cb10').addEventListener('click', function(){ setBet(10); });
-
-function doSpin(){
-  if(spinning) return;
-  // AUDIO: init + start music on first interaction, then spin sound
-  initAudio();
-  if(!musicPlaying) startMusic();
-  startSpinSound();
-
-  var free=freeSpins>0;
-  if(!free){
-    if(bal<bet){ setMsg('Insufficient balance',''); stopSpinSound(); return; }
-    bal-=bet; updBal();
-  } else { freeSpins--; updFS(); }
-  mollysThisSpin=0;
-  hideWinBreakdown();
-  lastWinLines=[];
-  setMsg('Spinning\u2026','');
-  document.getElementById('spinBtn').disabled=true;
-  spinning=true;
-
-  var res=[];
-  // Each reel gets max 1 Molly — decide per-reel whether Molly is allowed
-  // Molly appears on ~30% of reels per spin for natural rarity
-  for(var r=0;r<5;r++){
-    var allowMolly=(Math.random()<(free?0.12:0.50)); // 12% during free spins, 50% normal
-    res.push(rndCol(allowMolly));
-  }
-  // ── Dynamic sequential reel system ──────────────────────────────────────
-  // Reels land one at a time. Speed increases with each Molly found.
-  // If no Molly by reel 3, reels 4-5 slow down (no chance at bonus).
-  var reelsDone=0;
-  var mollysSoFar=0; // track during this spin for speed decisions
-
-  function launchReel(reelIdx){
-    var baseDur, startDelay;
-
-    // Base duration — fast and punchy, ~2s total for all 5
-    var baseTimes=[160,175,190,205,220];
-    baseDur=baseTimes[reelIdx];
-
-    // Adjust speed based on Molly drama state
-    if(mollysSoFar>=2){
-      // 2 Mollys — overdrive, reels fly
-      baseDur=Math.max(110,baseDur-60);
-    } else if(mollysSoFar===1){
-      // 1 Molly — speeding up
-      baseDur=Math.max(130,baseDur-40);
-    } else if(reelIdx>=3 && mollysSoFar===0){
-      // Reels 4-5, no Molly — slight slowdown for drama
-      baseDur=baseDur+30;
+  // ── Side cannon: fires from left and right edges ──
+  function sideCannons(count, opts){
+    for(var i=0;i<count;i++){
+      (function(i){ setTimeout(function(){
+        // Left cannon
+        var lo={shape:(opts&&opts.shape)||'coin',size:(opts&&opts.size)||11,
+          color:(opts&&opts.color)||null,life:(opts&&opts.life)||1800,
+          upForce:0,gravity:(opts&&opts.gravity)||0.4,spread:0,
+          vxOverride:(6+Math.random()*10)};
+        createParticle(0, window.innerHeight*(0.3+Math.random()*0.3), lo);
+        var ro={shape:(opts&&opts.shape)||'coin',size:(opts&&opts.size)||11,
+          color:(opts&&opts.color)||null,life:(opts&&opts.life)||1800,
+          upForce:0,gravity:(opts&&opts.gravity)||0.4,spread:0,
+          vxOverride:-(6+Math.random()*10)};
+        createParticle(window.innerWidth, window.innerHeight*(0.3+Math.random()*0.3), ro);
+      }, i*25); })(i);
     }
-
-    spinReel(reelIdx, res[reelIdx], baseDur, function(){
-      reelsDone++;
-      // Check if this reel has a Molly (any row)
-      var hasMolly=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0||res[reelIdx][3]===0;
-      if(hasMolly) mollysSoFar++;
-
-      // Trigger Molly land effects
-      checkMollyLand(res,reelIdx,reelsDone,free);
-
-      if(reelsDone===5){
-        onDone(res,free);
-      } else {
-        // Stagger between reels — shorter gap when excited
-        var gap = mollysSoFar>0 ? 30 : 50;
-        if(mollysSoFar>=2) gap=15;
-        setTimeout(function(){ launchReel(reelsDone); }, gap);
-      }
-    });
   }
 
-  // Start first reel after brief pause
-  setTimeout(function(){ launchReel(0); }, 80);
-}
-document.getElementById('spinBtn').addEventListener('click', doSpin);
-
-// Spacebar triggers spin
-document.addEventListener('keydown', function(e){
-  if(e.code==='Space' || e.key===' ' || e.keyCode===32){
-    e.preventDefault(); // stop page scroll
-    var btn=document.getElementById('spinBtn');
-    var intro=document.getElementById('introScreen');
-    // Only spin if intro is gone and button is enabled
-    if(intro && intro.style.display!=='none' && intro.style.opacity!=='0') return;
-    if(btn && !btn.disabled) doSpin();
-  }
-});
-
-function spinReel(idx,finals,dur,cb){
-  var t=document.getElementById('t'+idx);
-  var reelEl=document.getElementById('r'+idx);
-  t.style.transition='none'; t.style.transform='translateY(0)'; t.innerHTML='';
-
-  // Motion blur + streak while spinning
-  if(reelEl){
-    reelEl.classList.add('spinning-blur','spin-active');
-    reelEl.classList.remove('landing');
-  }
-
-  var PAD=16;
-  for(var i=0;i<PAD;i++) t.appendChild(makeCell(rndSym()));
-  for(var j=0;j<4;j++) t.appendChild(makeCell(finals[j]));
-  t.appendChild(makeCell(rndSym()));
-  var target=PAD*CH;
-
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    // Slightly springy ease for more life
-    t.style.transition='transform '+dur+'ms cubic-bezier(0.22,1,0.36,1)';
-    t.style.transform='translateY(-'+target+'px)';
-  }); });
-
-  setTimeout(function(){
-    // Remove blur, trigger bounce
-    if(reelEl){
-      reelEl.classList.remove('spinning-blur','spin-active');
-      reelEl.classList.add('landing');
-      setTimeout(function(){ reelEl.classList.remove('landing'); }, 400);
-    }
-    // Pop animation staggered across 4 visible cells
-    var cells=t.querySelectorAll('.cell');
-    for(var pi=0;pi<4;pi++){
-      (function(ci2){
+  // ── Strobe the machine border ──
+  function strobeMachine(times, colors, interval){
+    var i=0;
+    var iv=setInterval(function(){
+      var c=colors[i%colors.length];
+      document.getElementById('machineEl').style.boxShadow=[
+        '0 0 0 1px rgba(200,160,60,.45)',
+        '0 0 0 4px '+c,
+        '0 0 80px '+c,
+        '0 0 140px '+c,
+        'inset 0 1px 0 rgba(255,220,100,.1)'
+      ].join(',');
+      i++;
+      if(i>=times){
+        clearInterval(iv);
         setTimeout(function(){
-          if(cells[PAD+ci2]) cells[PAD+ci2].classList.add('pop');
-        }, ci2*40);
-      })(pi);
-    }
-    // Boston on this reel? Roll and show multiplier immediately
-    var bostonRow=-1;
-    for(var fi=0;fi<finals.length;fi++){
-      if(finals[fi]===2){ bostonRow=fi; break; }
-    }
-    if(bostonRow>=0){
-      var bMults=[2,3,5];
-      var rolledMult=bMults[Math.floor(Math.random()*bMults.length)];
-      window._pendingBostonMult=rolledMult;
-      showBostonPop(idx, rolledMult, bostonRow);
-
-    }
-    playReelStop(idx);
-    cb();
-  }, dur+100);
-}
-
-function onDone(res,wasFree){
-  spinning=false;
-  stopSpinSound();
-
-  // Count Mollys anywhere on grid — scatter counts on any row
-  // But track which reels have a Molly (for sticky lock) using center-row or any-row presence
-  var mollyReels=[];
-  for(var r=0;r<5;r++){
-    if(res[r][0]===0||res[r][1]===0||res[r][2]===0||res[r][3]===0) mollyReels.push(r);
-  }
-  var scatterCount=mollyReels.length;
-
-  // ── 1,024 Ways win evaluation — ALL 3 rows ──────────────────────────────
-  // res[reel][row]: row 0=top, 1=center, 2=bottom
-  var wildI=1, winAmt=0;
-  var winningCells=[];
-  var winLines=[];  // for breakdown display
-
-  var rowNames=['Top','Center','Bottom','Bottom-2'];
-
-  for(var row=0;row<4;row++){
-    for(var s=2;s<SYM.length;s++){
-      var cnt=0, cols=[];
-      for(var r3=0;r3<5;r3++){
-        var sym=res[r3][row];
-        if(sym===s||sym===wildI){ cnt++; cols.push(r3); } else break;
+          document.getElementById('machineEl').style.boxShadow=
+            '0 0 0 1px rgba(200,160,60,.45),0 0 0 3px rgba(100,60,10,.6),0 0 50px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,220,100,.1)';
+        },300);
       }
-      if(cnt>=3){
-        var linePay=SYM[s].mult[cnt]*bet*(wasFree?freeMult:1);
-        winAmt+=linePay;
-        for(var ci=0;ci<cols.length;ci++) winningCells.push({reel:cols[ci],row:row});
-        var basePay=SYM[s].mult[cnt]*bet;
-        winLines.push({sym:SYM[s].lbl, cnt:cnt, row:rowNames[row], pay:linePay, base:basePay, mult:(wasFree?freeMult:1)});
-      }
-    }
+    }, interval||120);
   }
 
-  // Highlight winning cells
-  var PAD=16;
-  for(var wc=0;wc<winningCells.length;wc++){
-    var cells=document.getElementById('t'+winningCells[wc].reel).querySelectorAll('.cell');
-    var cellIdx=PAD+winningCells[wc].row;
-    if(cells[cellIdx]) cells[cellIdx].classList.add('winning');
-  }
+  var cx=window.innerWidth/2;
 
-  // ── Boston multiplier check ──────────────────────────────────────────────
-  // Boston anywhere on the board + any win = multiplier applies
-  var bostonMult=1;
-  var bostonFound=false;
-  var bostonCells=[];
-  for(var br=0;br<5;br++){
-    for(var brow=0;brow<4;brow++){
-      if(res[br][brow]===2){
-        bostonFound=true;
-        bostonCells.push({reel:br,row:brow});
-      }
-    }
-  }
-  if(bostonFound && winAmt>0){
-    // Use the multiplier already rolled and shown at reel-stop time
-    var mults=[2,3,5];
-    bostonMult=(window._pendingBostonMult && window._pendingBostonMult>0)
-      ? window._pendingBostonMult
-      : mults[Math.floor(Math.random()*mults.length)];
-    window._pendingBostonMult=0; // clear after use
-    var preBoston=winAmt;
-    winAmt=winAmt*bostonMult;
-    // Show the extra amount Boston added (not the full total)
-    winLines.push({sym:'BOSTON ×'+bostonMult,cnt:bostonMult,row:'ANYWHERE',pay:winAmt-preBoston});
-    // Show multiplier badge on every Boston cell
-    for(var bi=0;bi<bostonCells.length;bi++){
-      var bc=bostonCells[bi];
-      var bcells=document.getElementById('t'+bc.reel).querySelectorAll('.cell');
-      var bcell=bcells[PAD+bc.row];
-      if(bcell){
-        bcell.classList.add('winning');
-        var mTag=document.createElement('div');
-        mTag.style.cssText='position:absolute;top:4px;right:4px;background:#FF9500;color:#000;font-family:Cinzel,serif;font-weight:700;font-size:14px;padding:2px 6px;border-radius:6px;z-index:10;box-shadow:0 0 8px rgba(255,150,0,0.8)';
-        mTag.textContent=bostonMult+'x';
-        bcell.appendChild(mTag);
-      }
-    }
-  }
+  if(level==='small'){
+    // ── SMALL WIN — punchy and satisfying ──
+    flashScreen(0.45, 350);
+    glowMachine('rgba(255,215,0,.6)', 900);
+    showWinText('WIN','#FFD700',1800,amtStr);
+    shakeMachine(false);
 
-  // Store win lines for display
-  lastWinLines=winLines;
+    // Central burst — coins and stars
+    burstFrom(cx, 30, {shape:'coin',size:12,upForce:18,spread:14,life:1600,gravity:0.38});
+    burstFrom(cx, 18, {shape:'star',size:10,upForce:16,spread:18,life:1400,gravity:0.36});
+    burstFrom(cx, 10, {shape:'diamond',size:8,upForce:14,spread:16,life:1200,gravity:0.4});
 
-  // Pay any regular wins regardless of scatter
-  if(winAmt>0) doWin(winAmt,wasFree);
+    // Light rain
+    rain(20,{shape:'coin',size:9,gravity:0.45,life:1600},600);
 
-  // Scatter / sticky respin logic (not during free spins)
-  if(!wasFree){
-    if(scatterCount>=3){
-      // 3+ Mollys on one spin — straight to bonus modal
-      playScatterTrigger();
-      showWinText('\ud83d\udc3e '+scatterCount+' MOLLYS! \ud83d\udc3e','#FFD700',1800);
-      flashScreen(0.65, 500);
-      burst(35,{shape:'star',size:11,upForce:20,spread:20,life:1800,gravity:0.34});
-      setTimeout(function(){ showFSModal(scatterCount); },500);
-      document.getElementById('spinBtn').disabled=false;
-      return;
-    }
-    // 0, 1, or 2 Mollys — no bonus
-  } else if(wasFree && scatterCount>=3){
-    // Retrigger during free spins — show modal to add more spins
-    playScatterTrigger();
-    showWinText('\ud83d\udc3e RETRIGGER! \ud83d\udc3e','#FFD700',1800);
-    flashScreen(0.6, 400);
-    document.getElementById('spinBtn').disabled=true;
-    setTimeout(function(){ showFSModal(scatterCount); },500);
-    return;
+  } else if(level==='big'){
+    // ── BIG WIN — full explosion ──
+    flashScreen(0.7, 500);
+    strobeMachine(6, ['rgba(255,180,0,.8)','rgba(255,100,0,.6)'], 130);
+    showWinText('BIG WIN!','#FFD700',2400,amtStr);
+    shakeMachine(true);
+
+    // Wave 1 — immediate central explosion
+    burstFrom(cx-100, 35, {shape:'coin',size:13,upForce:24,spread:18,life:2000,gravity:0.35});
+    burstFrom(cx+100, 35, {shape:'coin',size:13,upForce:24,spread:18,life:2000,gravity:0.35});
+    burstFrom(cx, 30, {shape:'star',size:12,upForce:22,spread:22,life:1800,gravity:0.33});
+    burstFrom(cx, 20, {shape:'diamond',size:9,upForce:20,spread:20,life:1600,gravity:0.38});
+
+    // Side cannons
+    sideCannons(20, {shape:'coin',size:11,life:1800,gravity:0.38});
+
+    // Wave 2 — delayed
+    setTimeout(function(){
+      flashScreen(0.4, 300);
+      burstFrom(cx, 40, {shape:'coin',size:11,upForce:20,spread:24,life:1800,gravity:0.36});
+      burstFrom(cx, 20, {shape:'star',size:9,upForce:18,spread:20,life:1600,gravity:0.34});
+    }, 450);
+
+    // Sustained rain
+    rain(50, {shape:'coin',size:10,gravity:0.46,life:2000}, 1200);
+    rain(25, {shape:'star',size:8,gravity:0.42,life:1800}, 1000);
+
+  } else {
+    // ── MEGA WIN — absolute chaos ──
+    flashScreen(0.95, 700);
+    strobeMachine(12, [
+      'rgba(255,50,0,.9)','rgba(255,200,0,.9)','rgba(0,200,255,.7)',
+      'rgba(255,0,150,.7)','rgba(0,255,100,.7)','rgba(255,150,0,.9)'
+    ], 100);
+    showWinText('MEGA WIN!!!','#FF9500',3500,amtStr);
+    shakeMachine(true);
+    setTimeout(function(){ shakeMachine(true); }, 600);
+
+    // Wave 1 — triple explosion
+    burstFrom(cx-200, 50, {shape:'coin',size:15,upForce:28,spread:20,life:2800,gravity:0.32});
+    burstFrom(cx,     60, {shape:'coin',size:15,upForce:30,spread:24,life:2800,gravity:0.30});
+    burstFrom(cx+200, 50, {shape:'coin',size:15,upForce:28,spread:20,life:2800,gravity:0.32});
+    burstFrom(cx, 45, {shape:'star',size:14,upForce:26,spread:28,life:2600,gravity:0.29});
+    burstFrom(cx, 35, {shape:'diamond',size:12,upForce:24,spread:26,life:2400,gravity:0.34});
+
+    // Side cannons — heavy
+    sideCannons(40, {shape:'coin',size:13,life:2400,gravity:0.35});
+
+    // Wave 2
+    setTimeout(function(){
+      flashScreen(0.7, 400);
+      shakeMachine(true);
+      burstFrom(cx-150, 45, {shape:'coin',size:13,upForce:26,spread:22,life:2400,gravity:0.33});
+      burstFrom(cx+150, 45, {shape:'coin',size:13,upForce:26,spread:22,life:2400,gravity:0.33});
+      burstFrom(cx, 35, {shape:'star',size:11,upForce:24,spread:26,life:2200,gravity:0.31});
+      sideCannons(25, {shape:'star',size:10,life:2000,gravity:0.33});
+    }, 500);
+
+    // Wave 3
+    setTimeout(function(){
+      flashScreen(0.55, 350);
+      burstFrom(cx, 50, {shape:'coin',size:12,upForce:22,spread:28,life:2200,gravity:0.34});
+      burstFrom(cx, 30, {shape:'diamond',size:10,upForce:20,spread:24,life:2000,gravity:0.36});
+    }, 1000);
+
+    // Wave 4
+    setTimeout(function(){
+      flashScreen(0.4, 300);
+      burstFrom(cx-100, 40, {shape:'coin',size:11,upForce:20,spread:20,life:2000,gravity:0.35});
+      burstFrom(cx+100, 40, {shape:'coin',size:11,upForce:20,spread:20,life:2000,gravity:0.35});
+    }, 1600);
+
+    // Massive sustained rain from top — all shapes
+    rain(120, {shape:'coin',size:12,gravity:0.44,life:2600}, 3000);
+    rain(60,  {shape:'star',size:10,gravity:0.40,life:2400}, 2500);
+    rain(40,  {shape:'diamond',size:8,gravity:0.42,life:2200}, 2000);
   }
-
-  if(wasFree&&freeSpins===0){
-    setTimeout(function(){ updFS(); setMsg('Free Spins complete!','win'); },600);
-  }
-  // Light shake on every reel stop
-  shakeMachine(false);
-  // Reset Molly counter for next spin
-  mollysThisSpin=0;
-  document.getElementById('spinBtn').disabled=false;
 }
 
-function showWinBreakdown(lines, total){
-  if(!lines||lines.length===0) return;
-  var container=document.getElementById('wbLines');
-  container.innerHTML='';
-  lines.forEach(function(l){
-    var div=document.createElement('div');
-    div.className='wb-line';
-    // Parse row label from sym string if present
-    var symText=l.sym;
-    var rowText=l.row||'';
-    // Boston has multiplier info in sym
-    var isMult=(rowText==='ANYWHERE');
-    var chainStr='';
-    if(!isMult && l.base && l.mult && l.mult>1){
-      chainStr='<span class="wb-row-label">$'+l.base.toFixed(2)+' &times;'+l.mult+' free</span>';
-    } else if(rowText && !isMult){
-      chainStr='<span class="wb-row-label">'+rowText+'</span>';
-    }
-    div.innerHTML='<span class="wb-sym">'+symText+(l.cnt&&!isMult?' &times;'+l.cnt:'')+'</span>'
-      +chainStr
-      +'<span class="wb-pay">+$'+l.pay.toFixed(2)+'</span>';
-    container.appendChild(div);
-  });
-  // Total
-  // Show multiplier in title during free spins
-  var titleEl=document.getElementById('winBreakdown').querySelector('.wb-title');
-  if(titleEl){
-    titleEl.textContent = (freeSpins>=0 && freeMult>1 && lastWinLines.length>0)
-      ? 'Free Spin Win · ×'+freeMult+' Multiplier Applied'
-      : 'Win Breakdown';
-  }
-  document.getElementById('wbTotal').innerHTML=
-    '<span class="wb-total-label">TOTAL WIN</span>'
-    +'<span class="wb-total-amount">$'+total.toFixed(2)+'</span>';
-  var el=document.getElementById('winBreakdown');
-  el.classList.add('show');
-  // Auto-hide after 4 seconds, also cleared on next spin
-  clearTimeout(window._wbTimer);
-  window._wbTimer = setTimeout(function(){ hideWinBreakdown(); }, 4000);
-}
-
-function shakeMachine(big){
-  var m=document.getElementById('machineEl');
-  if(!m) return;
-  m.classList.remove('shake','shake-big');
-  // Force reflow so animation restarts
-  void m.offsetWidth;
-  m.classList.add(big?'shake-big':'shake');
-  setTimeout(function(){ m.classList.remove('shake','shake-big'); }, big?600:380);
-}
-
-function hideWinBreakdown(){
-  document.getElementById('winBreakdown').classList.remove('show');
-}
 
 function doWin(amt,free){
   if(amt>0){
