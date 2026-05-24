@@ -864,13 +864,8 @@ function showBostonPop(reelIdx, mult, rowIdx){
   badge.className = 'mult-badge';
   badge.textContent = mult + 'x';
 
-  var label = document.createElement('span');
-  label.className = 'mult-label';
-  label.textContent = 'BOSTON MULT';
-
   pop.appendChild(dog);
   pop.appendChild(badge);
-  pop.appendChild(label);
   targetCell.appendChild(pop);
 
   pop.style.animation = 'bostonPopIn 0.45s cubic-bezier(0.175,0.885,0.32,1.6) forwards';
