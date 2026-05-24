@@ -1385,6 +1385,417 @@ function updFS(){
     idle.style.display='block'; active.style.display='none'; panel.className='fs-panel';
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════════════════
+var SYM=[
+  {id:'molly', lbl:'MOLLY',    mult:[0,0,5,15,50,200], img:'molly', sc:true,  wi:false, bo:false},
+  {id:'trump', lbl:'WILDCARD', mult:[0,0,0,0,0,0],     img:'trump', sc:false, wi:true,  bo:false},
+  {id:'boston',lbl:'BOSTON',   mult:[0,0,0,0,0,0],     img:'boston',sc:false, wi:false, bo:true},
+  {id:'geoff', lbl:'GEOFF',    mult:[0,0,4,10,25,120], img:'geoff', sc:false, wi:false, bo:false},
+  {id:'emily', lbl:'EMILY',    mult:[0,0,2,7,20,96],   img:'emily', sc:false, wi:false, bo:false},
+  {id:'kalynn',lbl:'KALYNN',   mult:[0,0,2,6,15,74],   img:'kalynn',sc:false, wi:false, bo:false},
+  {id:'brady', lbl:'BRADY',    mult:[0,0,1,4,12,58],   img:'brady', sc:false, wi:false, bo:false},
+  {id:'ball',  lbl:'BALL',     mult:[0,0,1,2,5,22],    img:'ball',  sc:false, wi:false, bo:false}
+];
+var WT=[2,1,1,7,8,9,10,3], WS=0;
+for(var _i=0;_i<WT.length;_i++) WS+=WT[_i];
+
+function rndSym(){
+  var r=Math.random()*WS, s=0;
+  for(var i=0;i<SYM.length;i++){s+=WT[i];if(r<s)return i;}
+  return SYM.length-1;
+}
+
+function rndCol(allowMolly){
+  var col=[], used={};
+  for(var rw=0;rw<4;rw++){
+    var s=rndSym(), attempts=0;
+    while(attempts<40 && (used[s]===true || (s===0 && !allowMolly))){
+      s=rndSym(); attempts++;
+    }
+    used[s]=true; col.push(s);
+  }
+  return col;
+}
+
+var bal=100, bet=1, spinning=false, freeSpins=0, freeMult=1;
+var lastWinLines=[], mollysThisSpin=0, stickyActive=false;
+var stickyRes=[], stickyMollys=[];
+var CH=128;
+
+// Paytable
+(function(){
+  var c=document.getElementById('ptrows');
+  for(var i=0;i<SYM.length;i++){
+    var s=SYM[i];
+    var d=document.createElement('div');
+    d.className='pr'+(s.sc?' scatter-row':s.wi?' wild-row':s.bo?' boston-row':'');
+    var img=document.createElement('img'); img.src=IMGS[s.img]; img.alt=s.lbl;
+    var info=document.createElement('div'); info.className='pt-info';
+    var badge=document.createElement('span');
+    badge.className='pt-badge'+(s.sc?' sc-badge':s.wi?' wi-badge':s.bo?' bo-badge':'');
+    badge.textContent=s.sc?'SCATTER':s.wi?'WILD':s.bo?'MULTIPLIER':'SYMBOL';
+    var n=document.createElement('span'); n.className='pn'; n.textContent=s.lbl;
+    var m=document.createElement('span'); m.className='pm';
+    if(s.sc)      m.textContent='3x \u2192 x5\n4x \u2192 x15\n5x \u2192 x50';
+    else if(s.wi) m.textContent='Substitutes all\nsymbols except\nMolly';
+    else if(s.bo) m.textContent='Rare! Multiplies\nany win by\n2x, 3x, or 5x';
+    else          m.textContent='3x \u2192 x'+s.mult[2]+'\n4x \u2192 x'+s.mult[3]+'\n5x \u2192 x'+s.mult[5];
+    info.appendChild(badge); info.appendChild(n); info.appendChild(m);
+    d.appendChild(img); d.appendChild(info); c.appendChild(d);
+  }
+})();
+
+function makeCell(si){
+  var s=SYM[si];
+  var d=document.createElement('div');
+  d.className='cell'+(s.sc?' sc':'')+(s.wi?' wi':'')+(s.bo?' bo':'');
+  var img=document.createElement('img'); img.src=IMGS[s.img]; img.alt=s.lbl;
+  var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.lbl;
+  d.appendChild(img); d.appendChild(lbl);
+  return d;
+}
+
+function initReel(id){
+  var t=document.getElementById(id); t.innerHTML='';
+  for(var i=0;i<10;i++) t.appendChild(makeCell(rndSym()));
+  t.style.transform='translateY(-'+CH+'px)';
+}
+for(var ri=0;ri<5;ri++) initReel('t'+ri);
+
+function setMsg(txt,cls){
+  var b=document.getElementById('resultMsg'); b.textContent=txt;
+  b.className='result-msg'+(cls?' '+cls:'');
+  document.getElementById('resultBox').className='result-box'+(cls?' '+cls:'');
+}
+function updBal(){ document.getElementById('bal').textContent='$'+bal.toFixed(2); }
+updBal();
+
+// ── INTRO SCREEN ──────────────────────────────────────────────────────────────
+document.getElementById('introMolly').src=IMGS.molly;
+document.getElementById('introScreen').style.backgroundImage='url('+BG+')';
+document.getElementById('introPlayBtn').addEventListener('click',function(){
+  var intro=document.getElementById('introScreen');
+  intro.style.transition='opacity 0.6s ease-out';
+  intro.style.opacity='0';
+  setTimeout(function(){ intro.style.display='none'; },620);
+  initAudio();
+});
+
+function setBet(b){
+  if(spinning||freeSpins>0) return;
+  bet=b;
+  document.getElementById('betdisp').textContent='$'+b+'.00';
+  ['cb1','cb5','cb10'].forEach(function(id,i){
+    document.getElementById(id).className='ctrl-bbtn'+([1,5,10][i]===b?' on':'');
+  });
+}
+document.getElementById('cb1').addEventListener('click',  function(){ setBet(1);  });
+document.getElementById('cb5').addEventListener('click',  function(){ setBet(5);  });
+document.getElementById('cb10').addEventListener('click', function(){ setBet(10); });
+
+function doSpin(){
+  if(spinning) return;
+  initAudio();
+  if(!musicPlaying) startMusic();
+  startSpinSound();
+  var free=freeSpins>0;
+  if(!free){
+    if(bal<bet){ setMsg('Insufficient balance',''); stopSpinSound(); return; }
+    bal-=bet; updBal();
+  } else { freeSpins--; updFS(); }
+  mollysThisSpin=0;
+  hideWinBreakdown();
+  lastWinLines=[];
+  setMsg('Spinning\u2026','');
+  document.getElementById('spinBtn').disabled=true;
+  spinning=true;
+  var res=[];
+  for(var r=0;r<5;r++){
+    res.push(rndCol(Math.random()<(free?0.12:0.50)));
+  }
+  var mollysSoFar=0, reelsDone=0;
+  function launchReel(reelIdx){
+    var baseTimes=[160,175,190,205,220];
+    var baseDur=baseTimes[reelIdx];
+    if(mollysSoFar>=2)      baseDur=Math.max(110,baseDur-60);
+    else if(mollysSoFar===1) baseDur=Math.max(130,baseDur-40);
+    else if(reelIdx>=3 && mollysSoFar===0) baseDur=baseDur+30;
+    spinReel(reelIdx, res[reelIdx], baseDur, function(){
+      reelsDone++;
+      var hm=res[reelIdx][0]===0||res[reelIdx][1]===0||res[reelIdx][2]===0||res[reelIdx][3]===0;
+      if(hm) mollysSoFar++;
+      checkMollyLand(res,reelIdx,reelsDone,free);
+      if(reelsDone===5){ onDone(res,free); }
+      else {
+        var gap=mollysSoFar>0?30:50; if(mollysSoFar>=2) gap=15;
+        setTimeout(function(){ launchReel(reelsDone); },gap);
+      }
+    });
+  }
+  setTimeout(function(){ launchReel(0); },80);
+}
+document.getElementById('spinBtn').addEventListener('click',doSpin);
+document.addEventListener('keydown',function(e){
+  if(e.code==='Space'||e.key===' '||e.keyCode===32){
+    e.preventDefault();
+    var intro=document.getElementById('introScreen');
+    if(intro&&intro.style.display!=='none'&&intro.style.opacity!=='0') return;
+    var btn=document.getElementById('spinBtn');
+    if(btn&&!btn.disabled) doSpin();
+  }
+});
+
+function spinReel(idx,finals,dur,cb){
+  var t=document.getElementById('t'+idx);
+  var reelEl=document.getElementById('r'+idx);
+  t.style.transition='none'; t.style.transform='translateY(0)'; t.innerHTML='';
+  if(reelEl){ reelEl.classList.add('spinning-blur','spin-active'); reelEl.classList.remove('landing'); }
+  var PAD=16;
+  for(var i=0;i<PAD;i++) t.appendChild(makeCell(rndSym()));
+  for(var j=0;j<4;j++) t.appendChild(makeCell(finals[j]));
+  t.appendChild(makeCell(rndSym()));
+  var target=PAD*CH;
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    t.style.transition='transform '+dur+'ms cubic-bezier(0.22,1,0.36,1)';
+    t.style.transform='translateY(-'+target+'px)';
+  }); });
+  setTimeout(function(){
+    if(reelEl){
+      reelEl.classList.remove('spinning-blur','spin-active');
+      reelEl.classList.add('landing');
+      setTimeout(function(){ reelEl.classList.remove('landing'); },400);
+    }
+    var cells=t.querySelectorAll('.cell');
+    for(var pi=0;pi<4;pi++){
+      (function(ci2){ setTimeout(function(){ if(cells[PAD+ci2]) cells[PAD+ci2].classList.add('pop'); },ci2*40); })(pi);
+    }
+    // Boston check
+    var bostonRow=-1;
+    for(var fi=0;fi<finals.length;fi++){ if(finals[fi]===2){ bostonRow=fi; break; } }
+    if(bostonRow>=0){
+      var bMults=[2,3,5];
+      var rolledMult=bMults[Math.floor(Math.random()*bMults.length)];
+      window._pendingBostonMult=rolledMult;
+      showBostonPop(idx,rolledMult,bostonRow);
+    }
+    playReelStop(idx);
+    cb();
+  },dur+100);
+}
+
+function onDone(res,wasFree){
+  spinning=false;
+  stopSpinSound();
+  // Count Mollys on any row of each reel
+  var mollyReels=[];
+  for(var r=0;r<5;r++){
+    if(res[r][0]===0||res[r][1]===0||res[r][2]===0||res[r][3]===0) mollyReels.push(r);
+  }
+  var scatterCount=mollyReels.length;
+  // Win evaluation — all 4 rows
+  var wildI=1, winAmt=0, winningCells=[], winLines=[];
+  var rowNames=['Top','Center','Bottom','Bottom-2'];
+  for(var row=0;row<4;row++){
+    for(var s=2;s<SYM.length;s++){
+      var cnt=0, cols=[];
+      for(var r3=0;r3<5;r3++){
+        var sym=res[r3][row];
+        if(sym===s||sym===wildI){ cnt++; cols.push(r3); } else break;
+      }
+      if(cnt>=3){
+        var basePay=SYM[s].mult[cnt]*bet;
+        var linePay=basePay*(wasFree?freeMult:1);
+        winAmt+=linePay;
+        for(var ci=0;ci<cols.length;ci++) winningCells.push({reel:cols[ci],row:row});
+        winLines.push({sym:SYM[s].lbl,cnt:cnt,row:rowNames[row],pay:linePay,base:basePay,mult:(wasFree?freeMult:1)});
+      }
+    }
+  }
+  // Boston multiplier
+  var bostonMult=1, bostonFound=false, bostonCells=[];
+  for(var br=0;br<5;br++){
+    for(var brow=0;brow<4;brow++){
+      if(res[br][brow]===2){ bostonFound=true; bostonCells.push({reel:br,row:brow}); }
+    }
+  }
+  if(bostonFound&&winAmt>0){
+    var mults=[2,3,5];
+    bostonMult=(window._pendingBostonMult&&window._pendingBostonMult>0)
+      ?window._pendingBostonMult:mults[Math.floor(Math.random()*mults.length)];
+    window._pendingBostonMult=0;
+    var preBoston=winAmt;
+    winAmt=winAmt*bostonMult;
+    winLines.push({sym:'BOSTON \u00d7'+bostonMult,cnt:bostonMult,row:'ANYWHERE',pay:winAmt-preBoston});
+    var PAD2=16;
+    for(var bi=0;bi<bostonCells.length;bi++){
+      var bc=bostonCells[bi];
+      var bcells=document.getElementById('t'+bc.reel).querySelectorAll('.cell');
+      var bcell=bcells[PAD2+bc.row];
+      if(bcell){
+        bcell.classList.add('winning');
+        var mTag=document.createElement('div');
+        mTag.style.cssText='position:absolute;top:4px;right:4px;background:#FF9500;color:#000;font-family:Cinzel,serif;font-weight:700;font-size:14px;padding:2px 6px;border-radius:6px;z-index:10;box-shadow:0 0 8px rgba(255,150,0,0.8)';
+        mTag.textContent=bostonMult+'x';
+        bcell.appendChild(mTag);
+      }
+    }
+  }
+  // Highlight winning cells
+  var PAD3=16;
+  for(var wc=0;wc<winningCells.length;wc++){
+    var wcells=document.getElementById('t'+winningCells[wc].reel).querySelectorAll('.cell');
+    var wcell=wcells[PAD3+winningCells[wc].row];
+    if(wcell) wcell.classList.add('winning');
+  }
+  lastWinLines=winLines;
+  if(winAmt>0) doWin(winAmt,wasFree);
+  // Scatter
+  if(!wasFree){
+    if(scatterCount>=3){
+      playScatterTrigger();
+      showWinText('\ud83d\udc3e '+scatterCount+' MOLLYS! \ud83d\udc3e','#FFD700',1800);
+      flashScreen(0.65,500);
+      burst(35,{shape:'star',size:11,upForce:20,spread:20,life:1800,gravity:0.34});
+      setTimeout(function(){ showFSModal(scatterCount); },500);
+      document.getElementById('spinBtn').disabled=false;
+      return;
+    }
+  } else if(wasFree&&scatterCount>=3){
+    playScatterTrigger();
+    showWinText('\ud83d\udc3e RETRIGGER! \ud83d\udc3e','#FFD700',1800);
+    flashScreen(0.6,400);
+    document.getElementById('spinBtn').disabled=true;
+    setTimeout(function(){ showFSModal(scatterCount); },500);
+    return;
+  }
+  if(wasFree&&freeSpins===0){
+    setTimeout(function(){ updFS(); setMsg('Free Spins complete!','win'); },600);
+  }
+  shakeMachine(false);
+  mollysThisSpin=0;
+  document.getElementById('spinBtn').disabled=false;
+}
+
+function doWin(amt,free){
+  if(amt>0){
+    bal+=amt; updBal();
+    showWinBreakdown(lastWinLines,amt);
+    if(amt>=bet*50){
+      setMsg('MEGA WIN!  +$'+amt.toFixed(2),'big');
+      playMegaWin(); fireWinEffects('mega',amt); shakeMachine(true);
+    } else if(amt>=bet*10){
+      setMsg('BIG WIN!  +$'+amt.toFixed(2),'win');
+      playBigWin(); fireWinEffects('big',amt); shakeMachine(true);
+    } else {
+      setMsg((free?'Free Spin Win':'You win')+'  $'+amt.toFixed(2),'win');
+      playSmallWin(); fireWinEffects('small',amt); shakeMachine(false);
+    }
+  } else {
+    hideWinBreakdown();
+    setMsg(free?'No win this spin':'Better luck next time','');
+  }
+}
+
+function showFSModal(cnt){
+  document.getElementById('spinBtn').disabled=true;
+  var opts=cnt===3?[{s:15,m:2},{s:12,m:4},{s:10,m:5}]:cnt===4?[{s:22,m:3},{s:18,m:4},{s:15,m:5}]:[{s:30,m:2},{s:25,m:4},{s:20,m:5}];
+  document.getElementById('scatterTxt').textContent='Molly appeared '+cnt+' time'+(cnt>1?'s':'')+'. Choose your bonus:';
+  var grid=document.getElementById('cgrid'); grid.innerHTML='';
+  for(var oi=0;oi<opts.length;oi++){
+    (function(o){
+      var b=document.createElement('button'); b.className='cbtn';
+      b.textContent=o.s+' Free Spins\n'+o.m+'x Multiplier';
+      b.addEventListener('click',function(){ startFS(o.s,o.m); });
+      grid.appendChild(b);
+    })(opts[oi]);
+  }
+  document.getElementById('fsModal').className='overlay on';
+}
+
+function startFS(s,m){
+  document.getElementById('fsModal').className='overlay';
+  var isRetrigger=(freeSpins>0);
+  if(isRetrigger){
+    freeSpins+=s;
+    setMsg('+'+s+' Free Spins added! Total: '+freeSpins+' (\u00d7'+freeMult+')','win');
+  } else {
+    freeSpins=s; freeMult=m;
+    setMsg(s+' Free Spins \u00d7'+m+' Multiplier!','win');
+  }
+  updFS();
+  showWinText('BONUS ROUND!\n'+s+' SPINS \u00d7'+m,'#FF9500',2800);
+  flashScreen(0.7,600);
+  glowMachine('rgba(255,150,0,0.9)',2200);
+  pulseMachine(4,'rgba(255,120,0,0.7)');
+  burst(50,{shape:'coin',size:13,upForce:22,spread:22,life:2200,gravity:0.36});
+  burst(30,{shape:'star',size:11,upForce:20,spread:26,life:2000,gravity:0.33});
+  rain(40,{shape:'coin',size:10,gravity:0.46,life:1800},1200);
+  playBigWin();
+  setTimeout(function(){ document.getElementById('spinBtn').disabled=false; doSpin(); },900);
+}
+
+function updFS(){
+  var idle=document.getElementById('fsIdle'),active=document.getElementById('fsActive'),panel=document.getElementById('fsPanel');
+  if(freeSpins>0){
+    idle.style.display='none'; active.style.display='block'; panel.className='fs-panel active';
+    document.getElementById('fsCount').textContent=freeSpins;
+    document.getElementById('fsMult').textContent='\u00d7'+freeMult+' Multiplier';
+  } else {
+    idle.style.display='block'; active.style.display='none'; panel.className='fs-panel';
+  }
+}
+
+function shakeMachine(big){
+  var m=document.getElementById('machineEl');
+  if(!m) return;
+  m.classList.remove('shake','shake-big');
+  void m.offsetWidth;
+  m.classList.add(big?'shake-big':'shake');
+  setTimeout(function(){ m.classList.remove('shake','shake-big'); },big?600:380);
+}
+
+function showWinBreakdown(lines,total){
+  if(!lines||lines.length===0) return;
+  var container=document.getElementById('wbLines');
+  container.innerHTML='';
+  lines.forEach(function(l){
+    var div=document.createElement('div');
+    div.className='wb-line';
+    var symText=l.sym;
+    var rowText=l.row||'';
+    var isMult=(rowText==='ANYWHERE');
+    var chainStr='';
+    if(!isMult&&l.base&&l.mult&&l.mult>1){
+      chainStr='<span class="wb-row-label">$'+l.base.toFixed(2)+' ×'+l.mult+' free</span>';
+    } else if(rowText&&!isMult){
+      chainStr='<span class="wb-row-label">'+rowText+'</span>';
+    }
+    div.innerHTML='<span class="wb-sym">'+symText+(l.cnt&&!isMult?' ×'+l.cnt:'')+'</span>'
+      +chainStr+'<span class="wb-pay">+$'+l.pay.toFixed(2)+'</span>';
+    container.appendChild(div);
+  });
+  var titleEl=document.querySelector('#winBreakdown .wb-title');
+  if(titleEl){
+    titleEl.textContent=(freeSpins>=0&&freeMult>1&&lines.length>0)
+      ?'Free Spin Win · ×'+freeMult+' Multiplier Applied'
+      :'Win Breakdown';
+  }
+  document.getElementById('wbTotal').innerHTML=
+    '<span class="wb-total-label">TOTAL WIN</span>'
+    +'<span class="wb-total-amount">$'+total.toFixed(2)+'</span>';
+  var el=document.getElementById('winBreakdown');
+  el.classList.add('show');
+  clearTimeout(window._wbTimer);
+  window._wbTimer=setTimeout(function(){ hideWinBreakdown(); },4000);
+}
+
+function hideWinBreakdown(){
+  document.getElementById('winBreakdown').classList.remove('show');
+}
+
 </script>
 </body>
 </html>
