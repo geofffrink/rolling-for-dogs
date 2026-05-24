@@ -314,12 +314,12 @@ h1{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,44px);font-wei
 .intro-molly{width:120px;height:120px;border-radius:50%;border:3px solid #FFD700;box-shadow:0 0 30px rgba(255,215,0,.6),0 0 60px rgba(255,150,0,.25);object-fit:cover;flex-shrink:0;animation:mollybob 2s ease-in-out infinite alternate}
 @keyframes mollybob{from{transform:scale(1) rotate(-2deg)}to{transform:scale(1.05) rotate(2deg)}}
 .intro-divider{border:none;border-top:1px solid rgba(200,168,76,.25);margin:0 0 22px}
-.intro-rules{list-style:none;margin-bottom:26px;display:flex;flex-direction:column;gap:14px}
-.intro-rules li{display:flex;align-items:flex-start;gap:14px;text-align:left;background:rgba(0,0,0,.3);border:1px solid rgba(200,168,76,.1);border-radius:12px;padding:16px 20px}
+.intro-rules{list-style:none;margin-bottom:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.intro-rules li{display:flex;align-items:flex-start;gap:12px;text-align:left;background:rgba(0,0,0,.3);border:1px solid rgba(200,168,76,.28);border-radius:12px;padding:16px 18px}
 .intro-rules li .rule-icon{font-size:26px;flex-shrink:0;margin-top:2px}
 .intro-rules li .rule-text{font-family:'Cinzel',serif;font-size:15px;color:#c9a84c;letter-spacing:.5px;line-height:1.8}
 .intro-rules li .rule-text strong{color:#FFD700;display:block;font-size:17px;margin-bottom:4px;letter-spacing:1px}
-.intro-rules li.highlight{border-color:rgba(255,215,0,.28);background:rgba(255,215,0,.05)}
+.intro-rules li.highlight{border-color:rgba(200,168,76,.28);background:rgba(0,0,0,.3)}
 .intro-play-btn{width:100%;padding:20px;font-family:'Cinzel Decorative',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,#8B0000 0%,#CC0000 40%,#8B0000 100%);color:#fff8e0;border:none;border-radius:14px;cursor:pointer;letter-spacing:3px;position:relative;overflow:hidden;box-shadow:0 5px 0 #4a0000,0 8px 30px rgba(180,0,0,.5),inset 0 1px 0 rgba(255,150,150,.25);text-shadow:0 1px 4px rgba(0,0,0,.5);transition:all .12s;margin-top:4px}
 .intro-play-btn::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);animation:shimmer 2s infinite}
 .intro-play-btn:hover{transform:translateY(-2px);box-shadow:0 7px 0 #4a0000,0 12px 40px rgba(200,0,0,.5),inset 0 1px 0 rgba(255,150,150,.25)}
