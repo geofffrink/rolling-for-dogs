@@ -813,11 +813,7 @@ function checkMollyLand(res,reelIdx,doneCount,wasFree){
   if(hasMolly){
     mollysThisSpin++;
     playMollyLand(mollysThisSpin);
-    // Gold reel pulse
-    var reelEl=document.getElementById('t'+reelIdx).parentNode;
-    reelEl.style.transition='box-shadow 0.12s ease-in';
-    reelEl.style.boxShadow='0 0 0 4px #FFD700, 0 0 40px rgba(255,215,0,0.85)';
-    setTimeout(function(){ reelEl.style.transition='box-shadow 1.0s ease-out'; reelEl.style.boxShadow=''; },900);
+
     // MOLLY pop graphic — find which row she's on
     var mollyRow=0;
     for(var mr=0;mr<4;mr++){
@@ -1441,13 +1437,7 @@ function spinReel(idx,finals,dur,cb){
       var rolledMult=bMults[Math.floor(Math.random()*bMults.length)];
       window._pendingBostonMult=rolledMult;
       showBostonPop(idx, rolledMult, bostonRow);
-      // Green reel glow
-      var bReelEl=document.getElementById('r'+idx);
-      if(bReelEl){
-        bReelEl.style.transition='box-shadow 0.12s ease-in';
-        bReelEl.style.boxShadow='0 0 0 4px #00ff44, 0 0 40px rgba(0,255,68,0.8)';
-        setTimeout(function(){ bReelEl.style.transition='box-shadow 1.2s ease-out'; bReelEl.style.boxShadow=''; },1800);
-      }
+
     }
     playReelStop(idx);
     cb();
